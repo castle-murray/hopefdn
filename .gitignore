@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# build / deploy output
+dist/
+.vercel/
+.output/
+node_modules/.nitro/
+.nitro/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# logs & caches
+*.log
+.npm/
+.cache/
+.turbo/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# local archives
+*.tar.gz

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./styles/fonts.css";
 
 @theme {
   --color-navy: #0b1d3a;

@@ -1,0 +1,21 @@
+/*
+ * Self-hosted fonts (Fontsource) — latin only, font-display: swap.
+ * Removes the render-blocking fonts.googleapis.com request from the critical path.
+ */
+
+/* Display — Cormorant Garamond */
+@import "@fontsource/cormorant-garamond/latin-500.css";
+@import "@fontsource/cormorant-garamond/latin-600.css";
+@import "@fontsource/cormorant-garamond/latin-700.css";
+@import "@fontsource/cormorant-garamond/latin-500-italic.css";
+@import "@fontsource/cormorant-garamond/latin-600-italic.css";
+
+/* Body — Source Sans 3 */
+@import "@fontsource/source-sans-3/latin-400.css";
+@import "@fontsource/source-sans-3/latin-500.css";
+@import "@fontsource/source-sans-3/latin-600.css";
+@import "@fontsource/source-sans-3/latin-700.css";
+@import "@fontsource/source-sans-3/latin-400-italic.css";
+
+/* Script motto — Great Vibes */
+@import "@fontsource/great-vibes/latin-400.css";

@@ -9,6 +9,8 @@ import { CreatedWithGrokBanner } from "@/components/created-with-grok-banner";
 import { SiteShell } from "@/components/layout/site-shell";
 import { NotFoundComponent } from "@/components/not-found";
 import appCss from "../styles.css?url";
+import cormorant600 from "@fontsource/cormorant-garamond/files/cormorant-garamond-latin-600-normal.woff2?url";
+import sourceSans400 from "@fontsource/source-sans-3/files/source-sans-3-latin-400-normal.woff2?url";
 
 const APP_NAME = "H.O.P.E. Foundation, Inc.";
 const APP_DESCRIPTION =
@@ -40,13 +42,26 @@ export const Route = createRootRoute({
     links: [
       { rel: "icon", type: "image/png", href: "/favicon-64.png" },
       { rel: "icon", type: "image/webp", href: "/images/hope-mark-w160.webp" },
+      // Kick off CSS early; still apply as stylesheet for correct cascade.
+      { rel: "preload", href: appCss, as: "style" },
       { rel: "stylesheet", href: appCss },
+      // Critical self-hosted fonts (same-origin) — no fonts.googleapis.com round-trip.
+      {
+        rel: "preload",
+        href: sourceSans400,
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "preload",
+        href: cormorant600,
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Great+Vibes&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap",
-      },
     ],
   }),
   component: RootDocument,

@@ -24,7 +24,7 @@ function HopeCommunityHavenPage() {
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
           <div className="overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
             <img
-              src="/images/resource-center.jpg"
+              src="/images/resource-center.webp"
               alt="Vision for Hope Community Haven"
               className="aspect-[4/3] w-full object-cover"
             />

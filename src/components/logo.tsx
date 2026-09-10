@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 /** Icon-only mark (transparent PNG provided by the foundation). */
-export const HOPE_MARK_SRC = "/images/hope-mark.png";
+export const HOPE_MARK_SRC = "/images/hope-mark.webp";
 
 type LogoProps = {
   className?: string;

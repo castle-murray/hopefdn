@@ -36,7 +36,7 @@ export function AnniversaryBadge({
       />
 
       <img
-        src="/images/anniversary-badge.png"
+        src="/images/anniversary-badge.webp"
         alt=""
         draggable={false}
         className="relative z-[1] h-full w-full object-contain drop-shadow-[0_10px_24px_rgb(11_29_58/0.4)]"

@@ -93,7 +93,7 @@ const productUpsertSchema = z.object({
     .trim()
     .min(1)
     .max(500)
-    .default("/images/product-legacy-tumbler.jpg"),
+    .default("/images/product-legacy-tumbler.webp"),
   category: z.string().trim().min(1).max(80).default("merchandise"),
   isActive: z.boolean().default(true),
   stockQty: z.number().int().min(0).max(1_000_000).default(0),

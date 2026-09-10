@@ -71,7 +71,7 @@ function HomePage() {
       {/* Hero — cream wash + dark type (stronger scrim on mobile for legibility) */}
       <section className="relative min-h-[min(78vh,640px)] overflow-hidden bg-ivory sm:min-h-[min(72vh,640px)]">
         <img
-          src="/images/hero-community.jpg"
+          src="/images/hero-community.webp"
           alt="H.O.P.E. Foundation volunteers and children sharing a joyful moment outdoors"
           className="absolute inset-0 h-full w-full object-cover object-[55%_40%] sm:object-[62%_42%]"
         />
@@ -247,7 +247,7 @@ function HomePage() {
           <div className="relative">
             <div className="overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
               <img
-                src="/images/impact-counseling.jpg"
+                src="/images/impact-counseling.webp"
                 alt="A HOPE counselor meeting with a guest in a welcoming community space"
                 className="aspect-[4/3] w-full object-cover"
               />
@@ -361,7 +361,7 @@ function HomePage() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src="/images/resource-center.jpg"
+            src="/images/resource-center.webp"
             alt="Vision for Hope Community Haven"
             className="h-full w-full object-cover"
           />

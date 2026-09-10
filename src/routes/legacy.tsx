@@ -322,7 +322,7 @@ function ShopGrid({
           <div className="grid items-center gap-10 lg:grid-cols-2">
             <div className="overflow-hidden rounded-2xl bg-cream shadow-[var(--shadow-elevated)]">
               <img
-                src="/images/product-legacy-tumbler.jpg"
+                src="/images/product-legacy-tumbler.webp"
                 alt="HOPE Legacy Collection gold tumbler"
                 className="mx-auto aspect-[3/4] max-h-[480px] w-full object-cover object-center"
               />

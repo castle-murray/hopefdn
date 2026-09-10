@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Facebook,
@@ -13,8 +14,28 @@ import {
 import { Logo } from "@/components/logo";
 import { mainNav, site } from "@/data/site";
 import { Button } from "@/components/ui/button";
+import { getShopVisibility } from "@/lib/shop/server";
 
 export function Footer() {
+  const [showShop, setShowShop] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    void getShopVisibility()
+      .then((v) => {
+        if (!cancelled) setShowShop(v.canAccess);
+      })
+      .catch(() => {
+        if (!cancelled) setShowShop(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const nav = showShop
+    ? mainNav
+    : mainNav.filter((item) => item.href !== "/legacy");
+
   return (
     <footer className="mt-auto">
       {/* Mission strip */}
@@ -73,7 +94,7 @@ export function Footer() {
           <div>
             <h3 className="font-display text-lg text-gold-light">Explore</h3>
             <ul className="mt-4 space-y-2">
-              {mainNav.slice(0, 6).map((item) => (
+              {nav.slice(0, 6).map((item) => (
                 <li key={item.href}>
                   <Link
                     to={item.href}
@@ -107,17 +128,19 @@ export function Footer() {
                   Become a Partner
                 </Link>
               </li>
-              <li>
-                <Link to="/legacy" className="transition hover:text-gold-light">
-                  Legacy Collection
-                </Link>
-              </li>
+              {showShop ? (
+                <li>
+                  <Link to="/legacy" className="transition hover:text-gold-light">
+                    Legacy Collection
+                  </Link>
+                </li>
+              ) : null}
               <li>
                 <Link
-                  to="/resource-center"
+                  to="/hope-community-haven"
                   className="transition hover:text-gold-light"
                 >
-                  Resource Center Campaign
+                  Hope Community Haven
                 </Link>
               </li>
             </ul>

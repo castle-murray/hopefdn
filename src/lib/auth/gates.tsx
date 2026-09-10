@@ -13,8 +13,8 @@ import { useCurrentUser, useCurrentUserState } from "./use-current-user";
  * render nothing so there's no signed-out flash on hard reload.
  */
 
-/** Where `RedirectToSignIn` sends signed-out visitors. Create this route. */
-export const SIGN_IN_PATH = "/login";
+/** Where `RedirectToSignIn` sends signed-out visitors. Non-obvious path to reduce casual bot probes. */
+export const SIGN_IN_PATH = "/desk";
 
 /** Render children only when a user is present (real session, or the disabled-auth dev user). */
 export function SignedIn({ children }: { children: ReactNode }) {
@@ -35,7 +35,7 @@ export function SignedOut({ children }: { children: ReactNode }) {
 /**
  * Client-side redirect to the sign-in route (TanStack `<Navigate>` — NOT a full
  * `window.location` reload). A hard navigation re-bootstraps the SPA and re-runs
- * session loading, which feels like a second "Loading…" on /login.
+ * session loading, which feels like a second "Loading…" on the sign-in page.
  *
  * Guard routes by waiting out `isPending` first (see `use-current-user`), then
  * render this.
@@ -54,7 +54,7 @@ export function UserButton() {
   if (!user) return null;
   const label = user.displayName ?? user.primaryEmail ?? "Account";
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {user.profileImageUrl ? (
         <img
           src={user.profileImageUrl}
@@ -68,13 +68,21 @@ export function UserButton() {
       )}
       <span className="text-sm font-medium">{label}</span>
       {authEnabled && (
-        <button
-          type="button"
-          onClick={() => void signOut()}
-          className="cursor-pointer text-sm underline-offset-4 opacity-70 hover:underline"
-        >
-          Sign out
-        </button>
+        <>
+          <a
+            href="/account"
+            className="text-sm underline-offset-4 opacity-70 hover:underline"
+          >
+            Password
+          </a>
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="cursor-pointer text-sm underline-offset-4 opacity-70 hover:underline"
+          >
+            Log out
+          </button>
+        </>
       )}
     </div>
   );

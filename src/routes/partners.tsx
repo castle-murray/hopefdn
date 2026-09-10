@@ -33,10 +33,9 @@ function PartnersPage() {
               Become a partner
             </h2>
             <p className="mt-4 max-w-2xl text-muted">
-              Partnerships power meals, shelter coordination, events, and the
-              Resource Center Campaign. We welcome corporate sponsors, faith
-              communities, labor organizations, media, and private donors at
-              every level.
+              Partnerships power meals, shelter coordination, events, and Hope
+              Community Haven. We welcome corporate sponsors, faith communities,
+              labor organizations, media, and private donors at every level.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild variant="gold" size="lg">

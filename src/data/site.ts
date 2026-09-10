@@ -68,7 +68,7 @@ export type NavItem = {
 export const mainNav: NavItem[] = [
   { label: "Home", href: "/" },
   {
-    label: "About Us",
+    label: "About",
     href: "/about",
     children: [
       { label: "Who We Are", href: "/about", description: "Our story and values" },
@@ -77,7 +77,7 @@ export const mainNav: NavItem[] = [
     ],
   },
   {
-    label: "Our Impact",
+    label: "Impact",
     href: "/impact",
     children: [
       { label: "Stories of Hope", href: "/impact", description: "Real change in Hampton Roads" },
@@ -86,7 +86,7 @@ export const mainNav: NavItem[] = [
   },
   { label: "Events", href: "/events" },
   {
-    label: "The Legacy Collection",
+    label: "Shop",
     href: "/legacy",
     children: [
       { label: "Shop the Collection", href: "/legacy", description: "Wear the mission" },
@@ -102,9 +102,9 @@ export const mainNav: NavItem[] = [
       { label: "Partner Pledge", href: "/get-involved#pledge", description: "Monthly partners" },
     ],
   },
-  { label: "Resource Center", href: "/resource-center" },
-  { label: "Partners & Sponsors", href: "/partners" },
-  { label: "Media & News", href: "/media" },
+  { label: "Haven", href: "/hope-community-haven" },
+  { label: "Partners", href: "/partners" },
+  { label: "Media", href: "/media" },
 ];
 
 export const quickLinks = [
@@ -112,14 +112,16 @@ export const quickLinks = [
     title: "Events & Experiences",
     description: "Signature events that bring community together.",
     href: "/events",
-    image: "/images/events-derby.jpg",
+    image: "/images/events-experiences.jpg",
+    // Bias crop left so the woman on the far left stays in frame.
+    imagePosition: "22% center",
     icon: "calendar" as const,
   },
   {
     title: "The Legacy Collection",
     description: "Wear the mission. Carry the legacy.",
     href: "/legacy",
-    image: "/images/legacy-tumbler.jpg",
+    image: "/images/product-legacy-tumbler.jpg",
     icon: "shopping-bag" as const,
   },
   {
@@ -130,9 +132,9 @@ export const quickLinks = [
     icon: "heart-handshake" as const,
   },
   {
-    title: "Resource Center Campaign",
+    title: "Hope Community Haven",
     description: "Help us build a home for HOPE.",
-    href: "/resource-center",
+    href: "/hope-community-haven",
     image: "/images/resource-center.jpg",
     icon: "building" as const,
   },
@@ -145,48 +147,8 @@ export const quickLinks = [
   },
 ];
 
-export const events = [
-  {
-    id: "health-fair-2026",
-    title: "2026 Annual Health Fair",
-    date: "Saturday, July 18, 2026",
-    time: "TBD",
-    location: "TBD — Hampton Roads",
-    description:
-      "A community event for wellness and hope—connecting guests and neighbors with free health resources, screenings, and providers who care.",
-    cta: "Learn More",
-  },
-  {
-    id: "derby-dreams-2026",
-    title: "Derby Dreams: Building HOPE for All",
-    date: "Saturday, August 22, 2026",
-    time: "12:00 PM – 4:00 PM",
-    location: "Sheraton Norfolk",
-    description:
-      "A signature tradition and lasting legacy. Hats, hospitality, and hope—our premier community celebration supporting programs year-round.",
-    cta: "RSVP / Sponsor",
-  },
-  {
-    id: "5k-2026",
-    title: "2026 H.O.P.E. 5K Run/Walk",
-    date: "Saturday, September 5, 2026",
-    time: "8:00 AM",
-    location: "Mount Trashmore Park, 310 Edwin Drive, Virginia Beach, VA",
-    description:
-      "Lace up for legacy. Join runners, walkers, and families for a morning of fitness and fundraising across Hampton Roads.",
-    cta: "Register / Sponsor",
-  },
-  {
-    id: "gala-2026",
-    title: "World Homeless Day Black Tie Gala: An Evening of H.O.P.E.",
-    date: "Saturday, October 10, 2026",
-    time: "4:30 PM – 10:00 PM",
-    location: "Murray Center",
-    description:
-      "An elegant evening honoring dignity, compassion, and community on World Homeless Day—our black-tie celebration of ten years of impact.",
-    cta: "RSVP Today",
-  },
-];
+/** @deprecated Events live in the database (`events` table). Use listEvents(). */
+export const events = [] as const;
 
 export const impactStats = [
   { value: "10+", label: "Years of Service" },
@@ -314,23 +276,5 @@ export const scriptures = [
   },
 ];
 
-export const legacyProducts = [
-  {
-    name: "Legacy Tumbler",
-    price: "$28",
-    description: "Insulated gold-finish tumbler embossed with the H.O.P.E. Legacy mark. Every purchase fuels guest services.",
-    image: "/images/legacy-tumbler.jpg",
-  },
-  {
-    name: "Mission Polo",
-    price: "$35",
-    description: "Navy performance polo with gold heart emblem—the same look our volunteers wear in the field.",
-    image: "/images/hero-community.jpg",
-  },
-  {
-    name: "Legacy Tee",
-    price: "$22",
-    description: "Soft cotton tee with Together, We Build Legacy. Everyday wear that starts conversations.",
-    image: "/images/get-involved.jpg",
-  },
-];
+/** @deprecated Products live in the shop database — use listStoreProducts(). */
+export const legacyProducts = [] as const;

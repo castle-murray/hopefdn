@@ -1,10 +1,10 @@
 /**
- * Local email/password sign-in (this app's Better Auth DB — not the broker).
+ * Local username/password sign-in (this app's Better Auth DB).
+ * Public self-registration is always disabled — only superusers create accounts.
  *
- * Off by default. To enable: set `emailAndPasswordEnabled` to `true` below,
- * then build sign-up / sign-in forms with `authClient.signUp.email` /
- * `authClient.signIn.email` from `@/lib/auth/client` (see the auth skill).
- *
- * Do NOT edit `server.ts` for this — that file is frozen pre-wired config.
+ * Do NOT edit `server.ts` for the enable flag — flip `emailAndPasswordEnabled` here.
  */
-export const emailAndPasswordEnabled = false;
+export const emailAndPasswordEnabled = true;
+
+/** Public /sign-up is closed; accounts are created by an admin only. */
+export const publicSignUpDisabled = true;

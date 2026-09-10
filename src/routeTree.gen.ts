@@ -11,16 +11,24 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as DeskRouteImport } from './routes/desk'
 import { Route as DonateRouteImport } from './routes/donate'
 import { Route as EventsRouteImport } from './routes/events'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GetInvolvedRouteImport } from './routes/get-involved'
+import { Route as HopeCommunityHavenRouteImport } from './routes/hope-community-haven'
 import { Route as ImpactRouteImport } from './routes/impact'
 import { Route as LegacyRouteImport } from './routes/legacy'
-import { Route as DeskRouteImport } from './routes/desk'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as MediaRouteImport } from './routes/media'
 import { Route as PartnersRouteImport } from './routes/partners'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResourceCenterRouteImport } from './routes/resource-center'
+import { Route as AdminOrdersRouteImport } from './routes/admin_.orders'
+import { Route as AdminShopRouteImport } from './routes/admin_.shop'
+import { Route as AdminUsersRouteImport } from './routes/admin_.users'
+import { Route as EventsManageRouteImport } from './routes/events_.manage'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -33,6 +41,21 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeskRoute = DeskRouteImport.update({
+  id: '/desk',
+  path: '/desk',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DonateRoute = DonateRouteImport.update({
   id: '/donate',
   path: '/donate',
@@ -43,9 +66,19 @@ const EventsRoute = EventsRouteImport.update({
   path: '/events',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GetInvolvedRoute = GetInvolvedRouteImport.update({
   id: '/get-involved',
   path: '/get-involved',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HopeCommunityHavenRoute = HopeCommunityHavenRouteImport.update({
+  id: '/hope-community-haven',
+  path: '/hope-community-haven',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImpactRoute = ImpactRouteImport.update({
@@ -58,16 +91,6 @@ const LegacyRoute = LegacyRouteImport.update({
   path: '/legacy',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DeskRoute = DeskRouteImport.update({
-  id: '/desk',
-  path: '/desk',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MediaRoute = MediaRouteImport.update({
   id: '/media',
   path: '/media',
@@ -78,9 +101,34 @@ const PartnersRoute = PartnersRouteImport.update({
   path: '/partners',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResourceCenterRoute = ResourceCenterRouteImport.update({
   id: '/resource-center',
   path: '/resource-center',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminOrdersRoute = AdminOrdersRouteImport.update({
+  id: '/admin_/orders',
+  path: '/admin/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminShopRoute = AdminShopRouteImport.update({
+  id: '/admin_/shop',
+  path: '/admin/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin_/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsManageRoute = EventsManageRouteImport.update({
+  id: '/events_/manage',
+  path: '/events/manage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -92,47 +140,71 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/donate': typeof DonateRoute
+  '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/desk': typeof DeskRoute
+  '/donate': typeof DonateRoute
   '/events': typeof EventsRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/get-involved': typeof GetInvolvedRoute
+  '/hope-community-haven': typeof HopeCommunityHavenRoute
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
-  '/login': typeof LoginRoute
   '/media': typeof MediaRoute
   '/partners': typeof PartnersRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
+  '/admin/orders': typeof AdminOrdersRoute
+  '/admin/shop': typeof AdminShopRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/events/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/donate': typeof DonateRoute
+  '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/desk': typeof DeskRoute
+  '/donate': typeof DonateRoute
   '/events': typeof EventsRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/get-involved': typeof GetInvolvedRoute
+  '/hope-community-haven': typeof HopeCommunityHavenRoute
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
-  '/login': typeof LoginRoute
   '/media': typeof MediaRoute
   '/partners': typeof PartnersRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
+  '/admin/orders': typeof AdminOrdersRoute
+  '/admin/shop': typeof AdminShopRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/events/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/donate': typeof DonateRoute
+  '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/desk': typeof DeskRoute
+  '/donate': typeof DonateRoute
   '/events': typeof EventsRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/get-involved': typeof GetInvolvedRoute
+  '/hope-community-haven': typeof HopeCommunityHavenRoute
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
-  '/login': typeof LoginRoute
   '/media': typeof MediaRoute
   '/partners': typeof PartnersRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
+  '/admin_/orders': typeof AdminOrdersRoute
+  '/admin_/shop': typeof AdminShopRoute
+  '/admin_/users': typeof AdminUsersRoute
+  '/events_/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -140,59 +212,94 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/account'
+    | '/admin'
+    | '/desk'
     | '/donate'
     | '/events'
+    | '/forgot-password'
     | '/get-involved'
+    | '/hope-community-haven'
     | '/impact'
     | '/legacy'
-    | '/login'
     | '/media'
     | '/partners'
+    | '/reset-password'
     | '/resource-center'
+    | '/admin/orders'
+    | '/admin/shop'
+    | '/admin/users'
+    | '/events/manage'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
+    | '/account'
+    | '/admin'
+    | '/desk'
     | '/donate'
     | '/events'
+    | '/forgot-password'
     | '/get-involved'
+    | '/hope-community-haven'
     | '/impact'
     | '/legacy'
-    | '/login'
     | '/media'
     | '/partners'
+    | '/reset-password'
     | '/resource-center'
+    | '/admin/orders'
+    | '/admin/shop'
+    | '/admin/users'
+    | '/events/manage'
     | '/api/auth/$'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/account'
+    | '/admin'
+    | '/desk'
     | '/donate'
     | '/events'
+    | '/forgot-password'
     | '/get-involved'
+    | '/hope-community-haven'
     | '/impact'
     | '/legacy'
-    | '/login'
     | '/media'
     | '/partners'
+    | '/reset-password'
     | '/resource-center'
+    | '/admin_/orders'
+    | '/admin_/shop'
+    | '/admin_/users'
+    | '/events_/manage'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AccountRoute: typeof AccountRoute
+  AdminRoute: typeof AdminRoute
+  DeskRoute: typeof DeskRoute
   DonateRoute: typeof DonateRoute
   EventsRoute: typeof EventsRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   GetInvolvedRoute: typeof GetInvolvedRoute
+  HopeCommunityHavenRoute: typeof HopeCommunityHavenRoute
   ImpactRoute: typeof ImpactRoute
   LegacyRoute: typeof LegacyRoute
-  DeskRoute: typeof DeskRoute
-  LoginRoute: typeof LoginRoute
   MediaRoute: typeof MediaRoute
   PartnersRoute: typeof PartnersRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ResourceCenterRoute: typeof ResourceCenterRoute
+  AdminOrdersRoute: typeof AdminOrdersRoute
+  AdminShopRoute: typeof AdminShopRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  EventsManageRoute: typeof EventsManageRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -212,11 +319,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/donate': {
-      id: '/donate'
-      path: '/donate'
-      fullPath: '/donate'
-      preLoaderRoute: typeof DonateRouteImport
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/desk': {
@@ -226,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeskRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/donate': {
+      id: '/donate'
+      path: '/donate'
+      fullPath: '/donate'
+      preLoaderRoute: typeof DonateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events': {
       id: '/events'
       path: '/events'
@@ -233,11 +354,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/get-involved': {
       id: '/get-involved'
       path: '/get-involved'
       fullPath: '/get-involved'
       preLoaderRoute: typeof GetInvolvedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hope-community-haven': {
+      id: '/hope-community-haven'
+      path: '/hope-community-haven'
+      fullPath: '/hope-community-haven'
+      preLoaderRoute: typeof HopeCommunityHavenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/impact': {
@@ -254,13 +389,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegacyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/media': {
       id: '/media'
       path: '/media'
@@ -275,11 +403,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PartnersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/resource-center': {
       id: '/resource-center'
       path: '/resource-center'
       fullPath: '/resource-center'
       preLoaderRoute: typeof ResourceCenterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/orders': {
+      id: '/admin_/orders'
+      path: '/admin/orders'
+      fullPath: '/admin/orders'
+      preLoaderRoute: typeof AdminOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/shop': {
+      id: '/admin_/shop'
+      path: '/admin/shop'
+      fullPath: '/admin/shop'
+      preLoaderRoute: typeof AdminShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/users': {
+      id: '/admin_/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events_/manage': {
+      id: '/events_/manage'
+      path: '/events/manage'
+      fullPath: '/events/manage'
+      preLoaderRoute: typeof EventsManageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -295,16 +458,24 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AccountRoute: AccountRoute,
+  AdminRoute: AdminRoute,
+  DeskRoute: DeskRoute,
   DonateRoute: DonateRoute,
   EventsRoute: EventsRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   GetInvolvedRoute: GetInvolvedRoute,
+  HopeCommunityHavenRoute: HopeCommunityHavenRoute,
   ImpactRoute: ImpactRoute,
   LegacyRoute: LegacyRoute,
-  DeskRoute: DeskRoute,
-  LoginRoute: LoginRoute,
   MediaRoute: MediaRoute,
   PartnersRoute: PartnersRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   ResourceCenterRoute: ResourceCenterRoute,
+  AdminOrdersRoute: AdminOrdersRoute,
+  AdminShopRoute: AdminShopRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  EventsManageRoute: EventsManageRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

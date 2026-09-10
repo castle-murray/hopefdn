@@ -2,9 +2,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Calendar, Newspaper } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { Button } from "@/components/ui/button";
-import { events, site } from "@/data/site";
+import { site } from "@/data/site";
+import { listEvents } from "@/lib/events/server";
+import { formatEventDate } from "@/lib/events/format";
 
 export const Route = createFileRoute("/media")({
+  loader: async () => {
+    const list = await listEvents({
+      data: { from: new Date().toISOString(), limit: 4 },
+    });
+    return { events: list.events };
+  },
   component: MediaPage,
   head: () => ({
     meta: [{ title: "Media & News | H.O.P.E. Foundation" }],
@@ -12,6 +20,7 @@ export const Route = createFileRoute("/media")({
 });
 
 function MediaPage() {
+  const { events } = Route.useLoaderData();
   return (
     <>
       <PageHero
@@ -77,7 +86,7 @@ function MediaPage() {
               >
                 <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-gold-dark">
                   <Calendar className="size-3.5" aria-hidden />
-                  {e.date}
+                  {formatEventDate(e.startsAt)}
                 </p>
                 <p className="mt-2 font-display text-lg font-semibold text-navy">
                   {e.title}
@@ -85,6 +94,11 @@ function MediaPage() {
                 <p className="mt-1 text-sm text-muted">{e.location}</p>
               </div>
             ))}
+            {events.length === 0 ? (
+              <p className="text-sm text-muted sm:col-span-2">
+                No upcoming events on the calendar right now.
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-10 text-center">

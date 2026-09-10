@@ -1,5 +1,5 @@
 import type { Plugin } from "vite";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -126,26 +126,88 @@ function authPopupPlugin(): Plugin {
 // opens a second dev-server port, which breaks the single-port preview.
 // The dev server starts once `src/router.tsx` and `src/routes/` exist — see
 // AGENTS.md § "First scaffold".
-export default defineConfig(({ command }) => ({
-  server: {
-    host: "0.0.0.0",
-    port: 8080,
-    strictPort: true,
-  },
-  resolve: { tsconfigPaths: true },
-  plugins: [
-    pgliteBootstrapPlugin(),
-    // Before tanstackStart so /auth/popup never falls through to the SPA.
-    authPopupPlugin(),
-    tailwindcss(),
-    tanstackStart(),
-    ...(command === "build"
-      ? [
-          nitro({
-            preset: "vercel",
-          }),
-        ]
-      : []),
-    viteReact(),
-  ],
-}));
+export default defineConfig(({ command, mode }) => {
+  // Load all keys from .env* into process.env for server-side SMTP/auth (not only VITE_*).
+  const fileEnv = loadEnv(mode, process.cwd(), "");
+  for (const [key, value] of Object.entries(fileEnv)) {
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
+
+  // Public hostname for reverse-proxied dev (e.g. hope.castle-murray.com → :8080).
+  // When server.host is 0.0.0.0, Vite defaults HMR to "localhost", which only
+  // works on this machine — remote browsers must use the public host instead.
+  const publicHostname = (
+    process.env.VITE_PUBLIC_HOSTNAME ||
+    fileEnv.VITE_PUBLIC_HOSTNAME ||
+    "hope.castle-murray.com"
+  ).trim();
+
+  const hmrHost = (
+    process.env.VITE_HMR_HOST ||
+    fileEnv.VITE_HMR_HOST ||
+    publicHostname
+  ).trim();
+
+  // ws + default port when the proxy is plain HTTP; set VITE_HMR_PROTOCOL=wss
+  // and VITE_HMR_CLIENT_PORT=443 if the public site is HTTPS.
+  const hmrProtocol = (
+    process.env.VITE_HMR_PROTOCOL ||
+    fileEnv.VITE_HMR_PROTOCOL ||
+    "ws"
+  )
+    .trim()
+    .replace(/:$/, "") as "ws" | "wss";
+
+  const hmrClientPortRaw = (
+    process.env.VITE_HMR_CLIENT_PORT ||
+    fileEnv.VITE_HMR_CLIENT_PORT ||
+    ""
+  ).trim();
+  // Without an explicit clientPort, Vite falls back to 8080 — remote browsers
+  // then hit hope.castle-murray.com:8080 which is usually not exposed. Use the
+  // public edge port instead (80/ws or 443/wss).
+  const hmrClientPort = hmrClientPortRaw
+    ? Number(hmrClientPortRaw)
+    : hmrProtocol === "wss"
+      ? 443
+      : hmrHost && hmrHost !== "localhost" && !hmrHost.startsWith("127.")
+        ? 80
+        : undefined;
+
+  return {
+    server: {
+      host: "0.0.0.0",
+      port: 8080,
+      strictPort: true,
+      // Temporary exhibition host (reverse-proxied to this dev server).
+      allowedHosts: [publicHostname, "hope.castle-murray.com", "localhost"],
+      // HMR websocket must target the host the *browser* can reach — not
+      // localhost — when viewing through a reverse proxy from another machine.
+      // Reverse proxy must also forward WebSocket upgrades for this to work.
+      // https://vite.dev/config/server-options.html#server-hmr
+      hmr: {
+        host: hmrHost,
+        protocol: hmrProtocol,
+        ...(hmrClientPort && Number.isFinite(hmrClientPort)
+          ? { clientPort: hmrClientPort }
+          : {}),
+      },
+    },
+    resolve: { tsconfigPaths: true },
+    plugins: [
+      pgliteBootstrapPlugin(),
+      // Before tanstackStart so /auth/popup never falls through to the SPA.
+      authPopupPlugin(),
+      tailwindcss(),
+      tanstackStart(),
+      ...(command === "build"
+        ? [
+            nitro({
+              preset: "vercel",
+            }),
+          ]
+        : []),
+      viteReact(),
+    ],
+  };
+});

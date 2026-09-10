@@ -1,100 +1,148 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import {
-  RedirectToSignIn,
-  UserButton,
-} from "@/lib/auth/gates";
-import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { PageHero } from "@/components/page-hero";
+  createFileRoute,
+  Link,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
+import { authClient, authEnabled } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
-import { Calendar, HandHeart, Heart, Users } from "lucide-react";
+import { PageHero } from "@/components/page-hero";
+import { SignedIn, SignedOut, UserButton } from "@/lib/auth/gates";
 
 export const Route = createFileRoute("/desk")({
-  component: DeskDashboard,
+  component: Login,
   head: () => ({
-    meta: [{ title: "Dashboard | H.O.P.E. Foundation" }],
+    meta: [{ title: "Staff Sign In | H.O.P.E. Foundation" }],
   }),
 });
 
-function DeskDashboard() {
-  const { user, isPending } = useCurrentUserState();
-  if (isPending) {
-    return (
-      <section className="mx-auto max-w-3xl px-4 py-24 text-center text-muted">
-        Loading…
-      </section>
-    );
-  }
-  if (!user) return <RedirectToSignIn />;
+const DEFAULT_AFTER_LOGIN = "/admin";
 
-  const name = user.displayName ?? user.primaryEmail ?? "friend";
+function safeRedirectPath(raw: string | null): string {
+  // Only allow same-app relative paths (no open redirects).
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return DEFAULT_AFTER_LOGIN;
+  return raw;
+}
+
+function Login() {
+  const navigate = useNavigate();
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const { error: err } = await authClient.signIn.username({
+        username: username.trim(),
+        password,
+      });
+      if (err) throw new Error(err.message ?? "Sign-in failed");
+
+      // Admin panel by default. Optional override: ?redirect=/events/manage
+      const redirectParam = new URLSearchParams(
+        searchStr.startsWith("?") ? searchStr.slice(1) : searchStr,
+      ).get("redirect");
+      const dest = safeRedirectPath(redirectParam);
+      await navigate({ to: dest as "/admin" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Authentication failed");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <>
       <PageHero
-        eyebrow="Dashboard"
-        title="Your HOPE desk"
-        description={`Welcome back, ${name}. Manage your involvement from here.`}
+        eyebrow="Staff"
+        title="Sign In"
+        description="Authorized staff access only. Accounts are created by a superuser."
+        align="center"
       />
-      <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-5 shadow-[var(--shadow-card)]">
-          <UserButton />
-          <Button asChild variant="outline">
-            <Link to="/">Back to site</Link>
-          </Button>
-        </div>
+      <section className="mx-auto max-w-md px-4 py-16 sm:px-6">
+        <div className="rounded-2xl border border-border bg-surface p-8 shadow-[var(--shadow-card)]">
+          <SignedIn>
+            <h2 className="font-display text-2xl font-semibold text-navy">
+              You&apos;re signed in
+            </h2>
+            <div className="mt-4">
+              <UserButton />
+            </div>
+            <div className="mt-6 flex flex-col gap-2">
+              <Button asChild>
+                <Link to="/admin">Admin panel</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/">Public site</Link>
+              </Button>
+            </div>
+          </SignedIn>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <DeskCard
-            to="/get-involved"
-            icon={HandHeart}
-            title="Get involved"
-            body="Volunteer, partner, or find ways to serve with us."
-          />
-          <DeskCard
-            to="/events"
-            icon={Calendar}
-            title="Events"
-            body="See upcoming gatherings and community programs."
-          />
-          <DeskCard
-            to="/donate"
-            icon={Heart}
-            title="Give"
-            body="Support guests across Hampton Roads."
-          />
-          <DeskCard
-            to="/impact"
-            icon={Users}
-            title="Our impact"
-            body="Stories and programs from the field."
-          />
+          <SignedOut>
+            <h2 className="font-display text-2xl font-semibold text-navy">
+              Staff sign in
+            </h2>
+            <p className="mt-2 text-sm text-muted">
+              Use the username and password issued by a superuser. Public
+              registration is not available.
+            </p>
+
+            {error ? (
+              <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                {error}
+              </p>
+            ) : null}
+
+            <form onSubmit={(e) => void onSubmit(e)} className="mt-6 space-y-3">
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium text-navy">Username</span>
+                <input
+                  className={fieldClass}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  autoComplete="username"
+                  minLength={3}
+                  maxLength={32}
+                  spellCheck={false}
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium text-navy">Password</span>
+                <input
+                  type="password"
+                  className={fieldClass}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  autoComplete="current-password"
+                />
+              </label>
+              <Button type="submit" className="w-full" disabled={busy || !authEnabled}>
+                {busy ? "Please wait…" : "Sign in"}
+              </Button>
+              <p className="text-center text-sm text-muted">
+                <Link
+                  to="/forgot-password"
+                  className="font-semibold text-gold-dark hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </p>
+            </form>
+          </SignedOut>
         </div>
       </section>
     </>
   );
 }
 
-function DeskCard({
-  to,
-  icon: Icon,
-  title,
-  body,
-}: {
-  to: "/get-involved" | "/events" | "/donate" | "/impact";
-  icon: typeof Heart;
-  title: string;
-  body: string;
-}) {
-  return (
-    <Link
-      to={to}
-      className="group rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)] transition hover:border-gold/40 hover:shadow-md"
-    >
-      <Icon className="size-5 text-gold" aria-hidden />
-      <h2 className="mt-3 font-display text-xl font-semibold text-navy group-hover:text-navy-deep">
-        {title}
-      </h2>
-      <p className="mt-1.5 text-sm text-muted">{body}</p>
-    </Link>
-  );
-}
+const fieldClass =
+  "w-full rounded-lg border border-border bg-ivory px-3 py-2 text-sm text-navy outline-none focus:border-gold focus:ring-2 focus:ring-gold/30";

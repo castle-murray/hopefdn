@@ -7,6 +7,7 @@ import {
 import { AuthProvider } from "@/lib/auth/provider";
 import { CreatedWithGrokBanner } from "@/components/created-with-grok-banner";
 import { SiteShell } from "@/components/layout/site-shell";
+import { NotFoundComponent } from "@/components/not-found";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "H.O.P.E. Foundation, Inc.";
@@ -37,17 +38,19 @@ export const Route = createRootRoute({
       { property: "og:description", content: APP_DESCRIPTION },
     ],
     links: [
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/png", href: "/favicon-64.png" },
+      { rel: "icon", type: "image/png", href: "/images/hope-mark.png" },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Great+Vibes&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap",
       },
     ],
   }),
   component: RootDocument,
+  notFoundComponent: NotFoundComponent,
 });
 
 function RootDocument() {

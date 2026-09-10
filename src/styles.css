@@ -20,6 +20,7 @@
 
   --font-display: "Cormorant Garamond", "Times New Roman", Georgia, serif;
   --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-script: "Great Vibes", "Segoe Script", "Apple Chancery", cursive;
 
   --radius-sm: 0.375rem;
   --radius-md: 0.625rem;
@@ -67,6 +68,22 @@
     font-family: var(--font-body);
   }
 
+  .font-script {
+    font-family: var(--font-script);
+  }
+
+  /* Contact-bar motto — elegant script + soft gold sheen (matches brand lockup) */
+  .site-motto {
+    font-family: var(--font-script);
+    font-size: 1.35rem;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    color: #f3e7c4;
+    text-shadow:
+      0 1px 0 rgb(255 255 255 / 0.22),
+      0 0 12px rgb(223 193 90 / 0.35);
+  }
+
   .gradient-navy {
     background: linear-gradient(
       135deg,
@@ -99,13 +116,59 @@
       1;
   }
 
+  /*
+   * Hero ivory wash: dark type needs a solid-enough scrim on small screens
+   * (text spans full width over the photo). From md up, fade left→right so
+   * the photo stays bright on the right (desktop mockup).
+   */
   .hero-overlay {
+    background:
+      linear-gradient(
+        180deg,
+        rgb(252 250 246 / 0.97) 0%,
+        rgb(252 250 246 / 0.95) 42%,
+        rgb(252 250 246 / 0.92) 72%,
+        rgb(252 250 246 / 0.88) 100%
+      );
+  }
+
+  @media (min-width: 640px) {
+    .hero-overlay {
+      background: linear-gradient(
+        105deg,
+        rgb(252 250 246 / 0.97) 0%,
+        rgb(252 250 246 / 0.94) 36%,
+        rgb(252 250 246 / 0.72) 58%,
+        rgb(252 250 246 / 0.28) 78%,
+        transparent 100%
+      );
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .hero-overlay {
+      background: linear-gradient(
+        100deg,
+        rgb(252 250 246 / 0.97) 0%,
+        rgb(252 250 246 / 0.92) 28%,
+        rgb(252 250 246 / 0.55) 52%,
+        rgb(252 250 246 / 0.12) 72%,
+        transparent 100%
+      );
+    }
+  }
+
+  /*
+   * Quick-link cream wash:
+   * top third transparent → middle third fades in → bottom third fully opaque.
+   */
+  .quick-link-overlay {
     background: linear-gradient(
-      105deg,
-      rgb(7 20 40 / 0.92) 0%,
-      rgb(11 29 58 / 0.78) 42%,
-      rgb(11 29 58 / 0.28) 72%,
-      rgb(11 29 58 / 0.12) 100%
+      180deg,
+      rgb(252 250 246 / 0) 0%,
+      rgb(252 250 246 / 0) 33.333%,
+      rgb(252 250 246 / 0.98) 66.666%,
+      rgb(252 250 246 / 0.98) 100%
     );
   }
 

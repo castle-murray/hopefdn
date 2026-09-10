@@ -2,7 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 /** Icon-only mark (transparent PNG provided by the foundation). */
-export const HOPE_MARK_SRC = "/images/hope-mark.webp";
+/** Default mark — 160px master; use srcset for 96/160 display densities. */
+export const HOPE_MARK_SRC = "/images/hope-mark-w160.webp";
 
 type LogoProps = {
   className?: string;
@@ -45,13 +46,15 @@ export function Logo({
       >
         <img
           src={HOPE_MARK_SRC}
+          srcSet="/images/hope-mark-w96.webp 96w, /images/hope-mark-w160.webp 160w"
+          sizes="(max-width: 640px) 32px, 40px"
           alt=""
           className={cn(
             "object-contain transition-all duration-300",
             compact ? "h-6 w-6" : "h-10 w-10",
           )}
-          width={80}
-          height={80}
+          width={40}
+          height={40}
           decoding="async"
         />
       </span>

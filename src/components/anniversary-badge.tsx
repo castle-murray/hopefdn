@@ -37,9 +37,14 @@ export function AnniversaryBadge({
 
       <img
         src="/images/anniversary-badge.webp"
+        srcSet="/images/anniversary-badge-w320.webp 320w, /images/anniversary-badge-w512.webp 512w"
+        sizes="(max-width: 640px) 120px, (max-width: 1024px) 176px, 200px"
         alt=""
+        width={512}
+        height={484}
         draggable={false}
         className="relative z-[1] h-full w-full object-contain drop-shadow-[0_10px_24px_rgb(11_29_58/0.4)]"
+        decoding="async"
       />
 
       {/*

@@ -28,6 +28,7 @@ import {
   placeDemoOrder,
   shopConfig,
 } from "@/lib/shop/server";
+import { responsiveImageProps } from "@/lib/images";
 import type { Order, Product } from "@/lib/shop/types";
 import { formatMoney } from "@/lib/shop/types";
 import { cn } from "@/lib/utils";
@@ -322,9 +323,16 @@ function ShopGrid({
           <div className="grid items-center gap-10 lg:grid-cols-2">
             <div className="overflow-hidden rounded-2xl bg-cream shadow-[var(--shadow-elevated)]">
               <img
-                src="/images/product-legacy-tumbler.webp"
+                {...responsiveImageProps(
+                  "/images/product-legacy-tumbler.webp",
+                  [800, 1200],
+                  "(max-width: 1024px) 100vw, 50vw",
+                )}
                 alt="HOPE Legacy Collection gold tumbler"
+                width={1200}
+                height={1600}
                 className="mx-auto aspect-[3/4] max-h-[480px] w-full object-cover object-center"
+                decoding="async"
               />
             </div>
             <div>
@@ -427,9 +435,17 @@ function ShopGrid({
                   >
                     <div className="aspect-[4/3] overflow-hidden bg-cream">
                       <img
-                        src={product.imageUrl}
+                        {...responsiveImageProps(
+                          product.imageUrl,
+                          [800],
+                          "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw",
+                        )}
                         alt={product.name}
+                        width={800}
+                        height={600}
                         className="h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                     <div className="flex flex-1 flex-col p-5">
@@ -527,9 +543,13 @@ function CartPanel({
                   className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center"
                 >
                   <img
-                    src={product.imageUrl}
+                    {...responsiveImageProps(product.imageUrl, [800], "80px")}
                     alt=""
+                    width={80}
+                    height={80}
                     className="h-20 w-20 rounded-lg object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-navy">{product.name}</p>

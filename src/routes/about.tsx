@@ -60,9 +60,15 @@ function AboutPage() {
           </div>
           <div className="overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
             <img
-              src="/images/about-community.webp"
+              src="/images/about-community-w800.webp"
+              srcSet="/images/about-community-w800.webp 800w, /images/about-community-w1200.webp 1200w"
+              sizes="(max-width: 1024px) 100vw, 50vw"
               alt="HOPE Foundation volunteers and community members together in the park"
+              width={1200}
+              height={800}
               className="aspect-[4/3] h-full w-full object-cover object-center"
+              loading="lazy"
+              decoding="async"
             />
           </div>
         </div>

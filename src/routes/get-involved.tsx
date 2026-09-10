@@ -52,9 +52,15 @@ function GetInvolvedPage() {
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
           <div className="overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
             <img
-              src="/images/get-involved.webp"
+              src="/images/get-involved-w800.webp"
+              srcSet="/images/get-involved-w800.webp 800w, /images/get-involved-w1200.webp 1200w"
+              sizes="(max-width: 1024px) 100vw, 50vw"
               alt="Diverse hands joined together in community service"
+              width={1200}
+              height={900}
               className="aspect-[4/3] w-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
           </div>
           <div>

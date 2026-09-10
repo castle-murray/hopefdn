@@ -44,9 +44,15 @@ function ImpactPage() {
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
           <div className="overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
             <img
-              src="/images/impact-counseling.webp"
+              src="/images/impact-counseling-w800.webp"
+              srcSet="/images/impact-counseling-w800.webp 800w, /images/impact-counseling-w1200.webp 1200w"
+              sizes="(max-width: 1024px) 100vw, 50vw"
               alt="Counselor supporting a guest at HOPE"
+              width={1200}
+              height={900}
               className="aspect-[4/3] w-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
           </div>
           <div>

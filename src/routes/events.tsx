@@ -48,9 +48,15 @@ function EventsPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
             <img
-              src="/images/events-experiences.webp"
+              src="/images/events-experiences-w800.webp"
+              srcSet="/images/events-experiences-w800.webp 800w, /images/events-experiences-w1200.webp 1200w, /images/events-experiences.webp 1400w"
+              sizes="100vw"
               alt="Guests in festive hats celebrating at a HOPE Foundation community event"
+              width={1400}
+              height={600}
               className="aspect-[21/9] w-full object-cover object-[22%_32%]"
+              fetchPriority="high"
+              decoding="async"
             />
           </div>
 

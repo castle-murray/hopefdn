@@ -17,6 +17,11 @@ import {
   formatEventDate,
   formatEventTimeRange,
 } from "@/lib/events/format";
+import {
+  CARD_SRCSET_WIDTHS,
+  imgSrcSet,
+  QUICK_LINK_SIZES,
+} from "@/lib/images";
 import { getShopVisibility } from "@/lib/shop/server";
 
 export const Route = createFileRoute("/")({
@@ -71,9 +76,15 @@ function HomePage() {
       {/* Hero — cream wash + dark type (stronger scrim on mobile for legibility) */}
       <section className="relative min-h-[min(78vh,640px)] overflow-hidden bg-ivory sm:min-h-[min(72vh,640px)]">
         <img
-          src="/images/hero-community.webp"
+          src="/images/hero-community-w1280.webp"
+          srcSet="/images/hero-community-w800.webp 800w, /images/hero-community-w1280.webp 1280w, /images/hero-community.webp 1728w"
+          sizes="100vw"
           alt="H.O.P.E. Foundation volunteers and children sharing a joyful moment outdoors"
+          width={1728}
+          height={1152}
           className="absolute inset-0 h-full w-full object-cover object-[55%_40%] sm:object-[62%_42%]"
+          fetchPriority="high"
+          decoding="async"
         />
         <div className="hero-overlay absolute inset-0" />
 
@@ -152,8 +163,12 @@ function HomePage() {
               const media = (
                 <>
                   <img
-                    src={item.image}
+                    src={item.image.replace(/\.webp$/i, "-w800.webp")}
+                    srcSet={imgSrcSet(item.image, [...CARD_SRCSET_WIDTHS])}
+                    sizes={QUICK_LINK_SIZES}
                     alt=""
+                    width={1200}
+                    height={800}
                     className={
                       comingSoon
                         ? "absolute inset-0 h-full w-full object-cover"
@@ -164,6 +179,8 @@ function HomePage() {
                         ? { objectPosition: item.imagePosition }
                         : undefined
                     }
+                    loading="lazy"
+                    decoding="async"
                   />
                   <div className="quick-link-overlay absolute inset-0" />
                   {comingSoon ? (
@@ -247,9 +264,17 @@ function HomePage() {
           <div className="relative">
             <div className="overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
               <img
-                src="/images/impact-counseling.webp"
+                src="/images/impact-counseling-w800.webp"
+                srcSet={imgSrcSet("/images/impact-counseling.webp", [
+                  ...CARD_SRCSET_WIDTHS,
+                ])}
+                sizes="(max-width: 1024px) 100vw, 50vw"
                 alt="A HOPE counselor meeting with a guest in a welcoming community space"
+                width={1200}
+                height={900}
                 className="aspect-[4/3] w-full object-cover"
+                loading="lazy"
+                decoding="async"
               />
             </div>
             <div className="absolute -bottom-5 -right-2 max-w-[220px] rounded-xl border border-border bg-surface p-4 shadow-[var(--shadow-card)] sm:-right-4">
@@ -361,9 +386,17 @@ function HomePage() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src="/images/resource-center.webp"
+            src="/images/resource-center-w800.webp"
+            srcSet={imgSrcSet("/images/resource-center.webp", [
+              ...CARD_SRCSET_WIDTHS,
+            ])}
+            sizes="100vw"
             alt="Vision for Hope Community Haven"
+            width={1200}
+            height={800}
             className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-navy/85" />
         </div>

@@ -39,7 +39,7 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "icon", type: "image/png", href: "/favicon-64.png" },
-      { rel: "icon", type: "image/webp", href: "/images/hope-mark.webp" },
+      { rel: "icon", type: "image/webp", href: "/images/hope-mark-w160.webp" },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },

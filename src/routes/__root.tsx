@@ -11,14 +11,17 @@ import { NotFoundComponent } from "@/components/not-found";
 import appCss from "../styles.css?url";
 import cormorant600 from "@fontsource/cormorant-garamond/files/cormorant-garamond-latin-600-normal.woff2?url";
 import sourceSans400 from "@fontsource/source-sans-3/files/source-sans-3-latin-400-normal.woff2?url";
+import { PRIMARY_PUBLIC_HOST } from "@/lib/public-hosts";
 
 const APP_NAME = "H.O.P.E. Foundation, Inc.";
 const APP_DESCRIPTION =
   "Helping Others. Pursuing Excellence. Building legacy through compassion, dignity & community across Hampton Roads.";
-const host = import.meta.env.VITE_PUBLIC_HOSTNAME;
-const ogImage = host
-  ? `https://${host}/og.jpg`
-  : undefined;
+// Canonical host for absolute OG URLs (override with VITE_PUBLIC_HOSTNAME).
+const host =
+  (import.meta.env.VITE_PUBLIC_HOSTNAME as string | undefined)?.trim() ||
+  PRIMARY_PUBLIC_HOST;
+const ogImage = `https://${host}/og.jpg`;
+
 
 export const Route = createRootRoute({
   head: () => ({

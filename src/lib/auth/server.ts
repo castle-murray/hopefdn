@@ -20,6 +20,11 @@ import {
 } from "./email-password";
 import { pgliteDialect } from "./pglite-dialect";
 import { PREVIEW_ALLOWED_HOSTS } from "./preview";
+import {
+  PRIMARY_PUBLIC_HOST,
+  PUBLIC_HOSTS,
+  publicOrigins,
+} from "../public-hosts";
 
 // Kick (and share) PGLite bootstrap as soon as the auth server module loads.
 void ensureDbReady();
@@ -51,8 +56,10 @@ const authDisabled = env("VITE_AUTH_ENABLED") === "false";
 /** True when username/password auth is active (real sessions enforced). */
 export const authConfigured = !authDisabled && emailAndPasswordEnabled;
 
-// This app's own Better Auth origin. When deployed, set `BETTER_AUTH_URL`.
-// Otherwise resolve dynamically from the request host against the allowlist.
+// Resolve Better Auth origin from the request Host against the allowlist so
+// hopefdn.org, www.hopefdn.org, and hope.castle-murray.com all work.
+// Optional BETTER_AUTH_URL is only the fallback when Host is missing — not a
+// single-host lock (that would break multi-domain).
 const explicitBaseURL = env("BETTER_AUTH_URL");
 const previewAllowedHosts: string[] = [...PREVIEW_ALLOWED_HOSTS];
 const LOCAL_DEV_ORIGINS: string[] = [
@@ -60,33 +67,31 @@ const LOCAL_DEV_ORIGINS: string[] = [
   "http://127.0.0.1:8080",
   "http://[::1]:8080",
 ];
-// Temporary public exhibition URL (reverse-proxied to this app).
-const EXHIBITION_HOST = "hope.castle-murray.com";
-const EXHIBITION_ORIGINS: string[] = [
-  `https://${EXHIBITION_HOST}`,
-  `http://${EXHIBITION_HOST}`,
-];
-const baseURL = explicitBaseURL ?? {
+const PUBLIC_ORIGINS = publicOrigins(PUBLIC_HOSTS);
+
+const baseURL = {
   allowedHosts: [
     ...previewAllowedHosts,
     "localhost",
     "127.0.0.1",
     "[::1]",
-    EXHIBITION_HOST,
+    ...PUBLIC_HOSTS,
   ],
   protocol: "auto" as const,
-  fallback: "http://localhost:8080",
+  fallback:
+    explicitBaseURL ?? `https://${PRIMARY_PUBLIC_HOST}`,
 };
 
-const trustedOrigins: string[] = explicitBaseURL
-  ? [explicitBaseURL, ...LOCAL_DEV_ORIGINS, ...EXHIBITION_ORIGINS]
-  : [
-      ...previewAllowedHosts,
-      EXHIBITION_HOST,
-      ...previewAllowedHosts.flatMap((host) => [`https://${host}`, `http://${host}`]),
-      ...EXHIBITION_ORIGINS,
-      ...LOCAL_DEV_ORIGINS,
-    ];
+const trustedOrigins: string[] = [
+  ...previewAllowedHosts,
+  ...previewAllowedHosts.flatMap((host) => [
+    `https://${host}`,
+    `http://${host}`,
+  ]),
+  ...PUBLIC_ORIGINS,
+  ...LOCAL_DEV_ORIGINS,
+  ...(explicitBaseURL ? [explicitBaseURL] : []),
+];
 
 const databaseUrl = env("DATABASE_URL");
 

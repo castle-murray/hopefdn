@@ -133,14 +133,23 @@ export default defineConfig(({ command, mode }) => {
     if (process.env[key] === undefined) process.env[key] = value;
   }
 
-  // Public hostname for reverse-proxied dev (e.g. hope.castle-murray.com → :8080).
-  // When server.host is 0.0.0.0, Vite defaults HMR to "localhost", which only
-  // works on this machine — remote browsers must use the public host instead.
+  // Public hostnames (hopefdn.org, exhibition host, etc.). When server.host is
+  // 0.0.0.0, Vite defaults HMR to "localhost" — set VITE_HMR_HOST / PROTOCOL for
+  // whichever domain you're viewing through the reverse proxy.
   const publicHostname = (
     process.env.VITE_PUBLIC_HOSTNAME ||
     fileEnv.VITE_PUBLIC_HOSTNAME ||
-    "hope.castle-murray.com"
+    "hopefdn.org"
   ).trim();
+
+  const extraHosts = (
+    process.env.VITE_ALLOWED_HOSTS ||
+    fileEnv.VITE_ALLOWED_HOSTS ||
+    "hopefdn.org,www.hopefdn.org,hope.castle-murray.com"
+  )
+    .split(",")
+    .map((h) => h.trim())
+    .filter(Boolean);
 
   const hmrHost = (
     process.env.VITE_HMR_HOST ||
@@ -164,8 +173,8 @@ export default defineConfig(({ command, mode }) => {
     ""
   ).trim();
   // Without an explicit clientPort, Vite falls back to 8080 — remote browsers
-  // then hit hope.castle-murray.com:8080 which is usually not exposed. Use the
-  // public edge port instead (80/ws or 443/wss).
+  // then hit hostname:8080 which is usually not exposed. Use the public edge
+  // port instead (80/ws or 443/wss).
   const hmrClientPort = hmrClientPortRaw
     ? Number(hmrClientPortRaw)
     : hmrProtocol === "wss"
@@ -179,8 +188,16 @@ export default defineConfig(({ command, mode }) => {
       host: "0.0.0.0",
       port: 8080,
       strictPort: true,
-      // Temporary exhibition host (reverse-proxied to this dev server).
-      allowedHosts: [publicHostname, "hope.castle-murray.com", "localhost"],
+      allowedHosts: [
+        ...new Set([
+          publicHostname,
+          ...extraHosts,
+          "hopefdn.org",
+          "www.hopefdn.org",
+          "hope.castle-murray.com",
+          "localhost",
+        ]),
+      ],
       // HMR websocket must target the host the *browser* can reach — not
       // localhost — when viewing through a reverse proxy from another machine.
       // Reverse proxy must also forward WebSocket upgrades for this to work.
@@ -193,6 +210,7 @@ export default defineConfig(({ command, mode }) => {
           : {}),
       },
     },
+
     resolve: { tsconfigPaths: true },
     plugins: [
       pgliteBootstrapPlugin(),

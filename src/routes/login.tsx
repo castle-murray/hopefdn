@@ -39,7 +39,7 @@ function Login() {
                   type="button"
                   variant="outline"
                   className="w-full"
-                  onClick={() => signIn(p.providerId, { callbackURL: "/" })}
+                  onClick={() => signIn(p.providerId, { callbackURL: "/desk" })}
                 >
                   Continue with {p.label}
                 </Button>

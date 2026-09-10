@@ -16,6 +16,7 @@ import { Route as EventsRouteImport } from './routes/events'
 import { Route as GetInvolvedRouteImport } from './routes/get-involved'
 import { Route as ImpactRouteImport } from './routes/impact'
 import { Route as LegacyRouteImport } from './routes/legacy'
+import { Route as DeskRouteImport } from './routes/desk'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MediaRouteImport } from './routes/media'
 import { Route as PartnersRouteImport } from './routes/partners'
@@ -57,6 +58,11 @@ const LegacyRoute = LegacyRouteImport.update({
   path: '/legacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DeskRoute = DeskRouteImport.update({
+  id: '/desk',
+  path: '/desk',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/donate': typeof DonateRoute
+  '/desk': typeof DeskRoute
   '/events': typeof EventsRoute
   '/get-involved': typeof GetInvolvedRoute
   '/impact': typeof ImpactRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/donate': typeof DonateRoute
+  '/desk': typeof DeskRoute
   '/events': typeof EventsRoute
   '/get-involved': typeof GetInvolvedRoute
   '/impact': typeof ImpactRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/donate': typeof DonateRoute
+  '/desk': typeof DeskRoute
   '/events': typeof EventsRoute
   '/get-involved': typeof GetInvolvedRoute
   '/impact': typeof ImpactRoute
@@ -179,6 +188,7 @@ export interface RootRouteChildren {
   GetInvolvedRoute: typeof GetInvolvedRoute
   ImpactRoute: typeof ImpactRoute
   LegacyRoute: typeof LegacyRoute
+  DeskRoute: typeof DeskRoute
   LoginRoute: typeof LoginRoute
   MediaRoute: typeof MediaRoute
   PartnersRoute: typeof PartnersRoute
@@ -207,6 +217,13 @@ declare module '@tanstack/react-router' {
       path: '/donate'
       fullPath: '/donate'
       preLoaderRoute: typeof DonateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/desk': {
+      id: '/desk'
+      path: '/desk'
+      fullPath: '/desk'
+      preLoaderRoute: typeof DeskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/events': {
@@ -283,6 +300,7 @@ const rootRouteChildren: RootRouteChildren = {
   GetInvolvedRoute: GetInvolvedRoute,
   ImpactRoute: ImpactRoute,
   LegacyRoute: LegacyRoute,
+  DeskRoute: DeskRoute,
   LoginRoute: LoginRoute,
   MediaRoute: MediaRoute,
   PartnersRoute: PartnersRoute,

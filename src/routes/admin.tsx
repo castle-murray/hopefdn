@@ -13,6 +13,7 @@ import { RedirectToSignIn } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { canManageEvents } from "@/lib/events/server";
 import {
+  canManageOrders,
   canManageShop,
   getShopVisibility,
   setShopPublic,
@@ -22,7 +23,7 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin")({
   loader: async () => {
-    const [events, shop, users, visibility] = await Promise.all([
+    const [events, shop, users, visibility, ordersAccess] = await Promise.all([
       canManageEvents().catch(() => false),
       canManageShop().catch(() => false),
       canManageUsers().catch(() => false),
@@ -30,12 +31,14 @@ export const Route = createFileRoute("/admin")({
         publicEnabled: true,
         canAccess: true,
       })),
+      canManageOrders().catch(() => false),
     ]);
     return {
       events,
       shop,
       users,
       shopPublic: visibility.publicEnabled,
+      ordersAccess,
     };
   },
   component: AdminPanelPage,
@@ -46,7 +49,7 @@ export const Route = createFileRoute("/admin")({
 
 function AdminPanelPage() {
   const { user, isPending } = useCurrentUserState();
-  const { events, shop, users, shopPublic: initialPublic } =
+  const { events, shop, users, shopPublic: initialPublic, ordersAccess } =
     Route.useLoaderData();
   const router = useRouter();
   const [shopPublic, setShopPublicState] = useState(initialPublic);
@@ -91,7 +94,7 @@ function AdminPanelPage() {
           icon: Package,
         }
       : null,
-    shop
+    ordersAccess
       ? {
           to: "/admin/orders" as const,
           title: "Shop orders",

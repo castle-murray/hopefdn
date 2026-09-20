@@ -182,3 +182,11 @@ export const canManageShop = createServerFn({ method: "GET" }).handler(
     return canManageShopImpl();
   },
 );
+
+/** Staff when shop is public; admin/superuser only when shop is hidden. */
+export const canManageOrders = createServerFn({ method: "GET" }).handler(
+  async (): Promise<boolean> => {
+    const { canManageOrdersImpl } = await import("./shop.server");
+    return canManageOrdersImpl();
+  },
+);

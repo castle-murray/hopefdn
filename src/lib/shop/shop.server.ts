@@ -550,8 +550,29 @@ export async function adjustStockImpl(
 
 // ── Staff: orders ────────────────────────────────────────────────────────────
 
-export async function listOrdersImpl(userId: string): Promise<Order[]> {
+/**
+ * Orders admin: staff when shop is public; admin/superuser only when shop is hidden.
+ */
+async function assertCanManageOrders(userId: string): Promise<void> {
   await requireStaff(userId);
+  if (await readShopPublicFlag()) return;
+  await requireAdmin(userId);
+}
+
+export async function canManageOrdersImpl(): Promise<boolean> {
+  try {
+    const user = await getSessionUser();
+    if (!user) return false;
+    if (!(await ensureStaffAccess(user.id))) return false;
+    if (await readShopPublicFlag()) return true;
+    return isAdminUser(user.id);
+  } catch {
+    return false;
+  }
+}
+
+export async function listOrdersImpl(userId: string): Promise<Order[]> {
+  await assertCanManageOrders(userId);
   const sql = await getSql();
   const rows = await sql.query<OrderRow>(
     `select * from orders order by created_at desc limit 200`,
@@ -564,7 +585,7 @@ export async function getOrderImpl(
   userId: string,
   id: string,
 ): Promise<Order | null> {
-  await requireStaff(userId);
+  await assertCanManageOrders(userId);
   const sql = await getSql();
   const rows = await sql.query<OrderRow>(
     `select * from orders where id = $1 or order_number = $1 limit 1`,
@@ -589,7 +610,7 @@ export async function updateOrderStatusImpl(
   userId: string,
   data: UpdateOrderInput,
 ): Promise<Order> {
-  await requireStaff(userId);
+  await assertCanManageOrders(userId);
   const sql = await getSql();
   const existing = await sql.query<OrderRow>(
     `select * from orders where id = $1 limit 1`,

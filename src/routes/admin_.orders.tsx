@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, Truck } from "lucide-react";
 import { BackToAdmin } from "@/components/back-to-admin";
 import { PageHero } from "@/components/page-hero";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { RedirectToSignIn } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
-  canManageShop,
+  canManageOrders,
   listOrders,
   updateOrderStatus,
 } from "@/lib/shop/server";
@@ -22,8 +22,9 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin_/orders")({
   loader: async () => {
-    const can = await canManageShop();
-    if (!can) return { can: false as const, orders: [] as Order[] };
+    const can = await canManageOrders().catch(() => false);
+    // When the public shop is off, only superusers may open orders.
+    if (!can) throw redirect({ to: "/admin" });
     const orders = await listOrders();
     return { can: true as const, orders };
   },

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Calendar, Newspaper } from "lucide-react";
+import { ArrowRight, Calendar, Mic2, Newspaper } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { Button } from "@/components/ui/button";
 import { site } from "@/data/site";
@@ -74,6 +74,31 @@ function MediaPage() {
               </ul>
             </aside>
           </div>
+
+          <Link
+            to="/nobody-asked-me"
+            className="group mt-10 flex flex-col gap-6 overflow-hidden rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:border-gold/40 hover:shadow-[var(--shadow-elevated)] sm:flex-row sm:items-center sm:p-8"
+          >
+            <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gold text-navy-deep shadow">
+              <Mic2 className="size-6" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-dark">
+                Podcast · Coming Soon
+              </p>
+              <h2 className="mt-2 font-display text-2xl font-semibold text-navy transition group-hover:text-gold-dark sm:text-3xl">
+                Nobody Asked Me
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
+                Honest conversations about hope, dignity, and the stories that
+                shape our community—launching soon from H.O.P.E. Foundation.
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-gold-dark">
+              Learn more
+              <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden />
+            </span>
+          </Link>
 
           <h3 className="mt-14 font-display text-2xl font-semibold text-navy">
             On the calendar

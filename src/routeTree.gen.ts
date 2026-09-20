@@ -22,6 +22,7 @@ import { Route as HopeCommunityHavenRouteImport } from './routes/hope-community-
 import { Route as ImpactRouteImport } from './routes/impact'
 import { Route as LegacyRouteImport } from './routes/legacy'
 import { Route as MediaRouteImport } from './routes/media'
+import { Route as NobodyAskedMeRouteImport } from './routes/nobody-asked-me'
 import { Route as PartnersRouteImport } from './routes/partners'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResourceCenterRouteImport } from './routes/resource-center'
@@ -96,6 +97,11 @@ const MediaRoute = MediaRouteImport.update({
   path: '/media',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NobodyAskedMeRoute = NobodyAskedMeRouteImport.update({
+  id: '/nobody-asked-me',
+  path: '/nobody-asked-me',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PartnersRoute = PartnersRouteImport.update({
   id: '/partners',
   path: '/partners',
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
   '/media': typeof MediaRoute
+  '/nobody-asked-me': typeof NobodyAskedMeRoute
   '/partners': typeof PartnersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
   '/media': typeof MediaRoute
+  '/nobody-asked-me': typeof NobodyAskedMeRoute
   '/partners': typeof PartnersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
   '/media': typeof MediaRoute
+  '/nobody-asked-me': typeof NobodyAskedMeRoute
   '/partners': typeof PartnersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/impact'
     | '/legacy'
     | '/media'
+    | '/nobody-asked-me'
     | '/partners'
     | '/reset-password'
     | '/resource-center'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/impact'
     | '/legacy'
     | '/media'
+    | '/nobody-asked-me'
     | '/partners'
     | '/reset-password'
     | '/resource-center'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/impact'
     | '/legacy'
     | '/media'
+    | '/nobody-asked-me'
     | '/partners'
     | '/reset-password'
     | '/resource-center'
@@ -293,6 +305,7 @@ export interface RootRouteChildren {
   ImpactRoute: typeof ImpactRoute
   LegacyRoute: typeof LegacyRoute
   MediaRoute: typeof MediaRoute
+  NobodyAskedMeRoute: typeof NobodyAskedMeRoute
   PartnersRoute: typeof PartnersRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ResourceCenterRoute: typeof ResourceCenterRoute
@@ -396,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/nobody-asked-me': {
+      id: '/nobody-asked-me'
+      path: '/nobody-asked-me'
+      fullPath: '/nobody-asked-me'
+      preLoaderRoute: typeof NobodyAskedMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/partners': {
       id: '/partners'
       path: '/partners'
@@ -469,6 +489,7 @@ const rootRouteChildren: RootRouteChildren = {
   ImpactRoute: ImpactRoute,
   LegacyRoute: LegacyRoute,
   MediaRoute: MediaRoute,
+  NobodyAskedMeRoute: NobodyAskedMeRoute,
   PartnersRoute: PartnersRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ResourceCenterRoute: ResourceCenterRoute,

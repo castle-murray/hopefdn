@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, Plus, Shield } from "lucide-react";
+import { ArrowLeft, Plus, Shield, Trash2 } from "lucide-react";
 import { BackToAdmin } from "@/components/back-to-admin";
 import { PageHero } from "@/components/page-hero";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,12 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
   canManageUsers,
   createManagedUser,
+  deleteManagedUser,
+  getUserContentOwnership,
   listManagedUsers,
   setUserRoles,
   type ManagedUser,
+  type UserContentOwnership,
 } from "@/lib/auth/users";
 import { adminSetUserPassword } from "@/lib/auth/password";
 import { cn } from "@/lib/utils";
@@ -50,6 +53,10 @@ function AdminUsersPage() {
   });
   const [passwordFor, setPasswordFor] = useState<ManagedUser | null>(null);
   const [adminNewPassword, setAdminNewPassword] = useState("");
+  const [deleteFor, setDeleteFor] = useState<ManagedUser | null>(null);
+  const [deleteOwnership, setDeleteOwnership] =
+    useState<UserContentOwnership | null>(null);
+  const [reassignToUserId, setReassignToUserId] = useState("");
 
   if (isPending) return null;
   if (!user) return <RedirectToSignIn />;
@@ -134,6 +141,58 @@ function AdminUsersPage() {
     }
   }
 
+  async function openDelete(target: ManagedUser) {
+    setBusy(true);
+    setError(null);
+    setPasswordFor(null);
+    setOpen(false);
+    try {
+      const ownership = await getUserContentOwnership({
+        data: { userId: target.id },
+      });
+      setDeleteFor(target);
+      setDeleteOwnership(ownership);
+      setReassignToUserId("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load ownership");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function closeDelete() {
+    setDeleteFor(null);
+    setDeleteOwnership(null);
+    setReassignToUserId("");
+  }
+
+  async function onDelete(e: React.FormEvent) {
+    e.preventDefault();
+    if (!deleteFor || !deleteOwnership) return;
+    if (deleteOwnership.needsReassign && !reassignToUserId) {
+      setError("Choose a user to reassign owned content to before deleting.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteManagedUser({
+        data: {
+          userId: deleteFor.id,
+          reassignToUserId: deleteOwnership.needsReassign
+            ? reassignToUserId
+            : undefined,
+        },
+      });
+      closeDelete();
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function toggleRole(target: ManagedUser, role: AppRole) {
     setBusy(true);
     setError(null);
@@ -151,6 +210,8 @@ function AdminUsersPage() {
       setBusy(false);
     }
   }
+
+  const reassignCandidates = users.filter((u) => u.id !== deleteFor?.id);
 
   return (
     <>
@@ -179,6 +240,7 @@ function AdminUsersPage() {
               onClick={() => {
                 setOpen(true);
                 setError(null);
+                closeDelete();
               }}
             >
               <Plus className="size-4" aria-hidden />
@@ -224,6 +286,83 @@ function AdminUsersPage() {
                     setPasswordFor(null);
                     setAdminNewPassword("");
                   }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          ) : null}
+
+          {deleteFor && deleteOwnership ? (
+            <form
+              onSubmit={(e) => void onDelete(e)}
+              className="mb-8 grid gap-4 rounded-2xl border border-red-200 bg-surface p-6 shadow-[var(--shadow-card)]"
+            >
+              <h2 className="font-display text-xl font-semibold text-navy">
+                Delete @{deleteFor.username ?? deleteFor.name}?
+              </h2>
+              <p className="text-sm text-muted">
+                This permanently removes the account. Sessions and login
+                credentials are removed automatically. You cannot delete
+                yourself or the last superuser.
+              </p>
+              {deleteOwnership.needsReassign ? (
+                <div className="grid gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                  <p className="font-medium">
+                    This user still owns content that must be reassigned:
+                  </p>
+                  <ul className="list-inside list-disc text-amber-900">
+                    <li>
+                      Events (created_by): {deleteOwnership.eventsCreatedBy}
+                    </li>
+                    <li>
+                      Events (updated_by): {deleteOwnership.eventsUpdatedBy}
+                    </li>
+                    <li>
+                      Distinct events: {deleteOwnership.eventsTotal}
+                    </li>
+                  </ul>
+                  <label className="mt-2 grid gap-1.5">
+                    <span className="font-medium text-navy">
+                      Reassign owned content to
+                    </span>
+                    <select
+                      className={inputClass}
+                      value={reassignToUserId}
+                      onChange={(e) => setReassignToUserId(e.target.value)}
+                      required
+                    >
+                      <option value="">Select a user…</option>
+                      {reassignCandidates.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} (@{u.username ?? "—"})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              ) : (
+                <p className="rounded-lg border border-border bg-ivory px-4 py-3 text-sm text-navy">
+                  No app content is tied to this user (seeded events and shop
+                  orders are not user-owned). Safe to delete.
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  disabled={
+                    busy ||
+                    (deleteOwnership.needsReassign && !reassignToUserId)
+                  }
+                  className="bg-red-700 text-white hover:bg-red-800"
+                >
+                  {busy ? "Deleting…" : "Delete user"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={closeDelete}
                 >
                   Cancel
                 </Button>
@@ -349,6 +488,11 @@ function AdminUsersPage() {
                       <span className="font-normal text-muted">
                         @{u.username ?? "—"}
                       </span>
+                      {u.id === user.id ? (
+                        <span className="ml-2 text-xs font-normal text-muted">
+                          (you)
+                        </span>
+                      ) : null}
                     </p>
                     <p className="mt-0.5 text-xs text-muted">{u.email}</p>
                   </div>
@@ -383,12 +527,24 @@ function AdminUsersPage() {
                         setPasswordFor(u);
                         setAdminNewPassword("");
                         setOpen(false);
+                        closeDelete();
                         setError(null);
                       }}
                       className="rounded-full border border-border bg-ivory px-3 py-1 text-xs font-bold uppercase tracking-wide text-navy hover:border-gold"
                     >
                       Set password
                     </button>
+                    {u.id !== user.id ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void openDelete(u)}
+                        className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-800 hover:border-red-400"
+                      >
+                        <Trash2 className="size-3" aria-hidden />
+                        Delete
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               </li>

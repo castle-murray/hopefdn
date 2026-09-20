@@ -4,7 +4,6 @@ import {
   Calendar,
   KeyRound,
   Package,
-  ShoppingBag,
   Truck,
   Users,
 } from "lucide-react";
@@ -114,14 +113,8 @@ function AdminPanelPage() {
       description: "Change your own password.",
       icon: KeyRound,
     },
-    {
-      to: "/legacy" as const,
-      title: "Legacy storefront",
-      description: "Preview the public shop experience.",
-      icon: ShoppingBag,
-    },
   ].filter(Boolean) as {
-    to: "/events/manage" | "/admin/shop" | "/admin/orders" | "/admin/users" | "/account" | "/legacy";
+    to: "/events/manage" | "/admin/shop" | "/admin/orders" | "/admin/users" | "/account";
     title: string;
     description: string;
     icon: typeof Calendar;

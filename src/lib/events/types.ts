@@ -9,6 +9,8 @@ export type CalendarEvent = {
   location: string;
   ctaLabel: string;
   ctaUrl: string | null;
+  /** Public path e.g. `/uploads/events/….webp`, or null when unset. */
+  imageUrl: string | null;
   startsAt: string;
   endsAt: string | null;
   status: EventStatus;

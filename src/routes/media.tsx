@@ -82,16 +82,27 @@ function MediaPage() {
             {events.map((e) => (
               <div
                 key={e.id}
-                className="rounded-xl border border-border bg-surface p-5 shadow-sm"
+                className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm"
               >
-                <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-gold-dark">
-                  <Calendar className="size-3.5" aria-hidden />
-                  {formatEventDate(e.startsAt)}
-                </p>
-                <p className="mt-2 font-display text-lg font-semibold text-navy">
-                  {e.title}
-                </p>
-                <p className="mt-1 text-sm text-muted">{e.location}</p>
+                {e.imageUrl ? (
+                  <img
+                    src={e.imageUrl}
+                    alt=""
+                    className="aspect-[16/9] w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : null}
+                <div className="p-5">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-gold-dark">
+                    <Calendar className="size-3.5" aria-hidden />
+                    {formatEventDate(e.startsAt)}
+                  </p>
+                  <p className="mt-2 font-display text-lg font-semibold text-navy">
+                    {e.title}
+                  </p>
+                  <p className="mt-1 text-sm text-muted">{e.location}</p>
+                </div>
               </div>
             ))}
             {events.length === 0 ? (

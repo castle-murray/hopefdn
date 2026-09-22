@@ -12,6 +12,7 @@ import {
   deleteEvent,
   listEvents,
   updateEvent,
+  uploadEventImage,
 } from "@/lib/events/server";
 import { canManageUsers } from "@/lib/auth/users";
 import type { CalendarEvent, EventStatus } from "@/lib/events/types";
@@ -59,6 +60,12 @@ type FormState = {
   startsAtLocal: string;
   endsAtLocal: string;
   status: EventStatus;
+  /** Existing saved path, if any. */
+  imageUrl: string | null;
+  /** Local file chosen for upload (not yet saved). */
+  imageFile: File | null;
+  /** Clear existing image on save. */
+  removeImage: boolean;
 };
 
 const emptyForm = (): FormState => ({
@@ -70,6 +77,9 @@ const emptyForm = (): FormState => ({
   startsAtLocal: "",
   endsAtLocal: "",
   status: "published",
+  imageUrl: null,
+  imageFile: null,
+  removeImage: false,
 });
 
 function toLocalInput(iso: string | null | undefined): string {
@@ -98,6 +108,26 @@ function eventToForm(event: CalendarEvent): FormState {
     startsAtLocal: toLocalInput(event.startsAt),
     endsAtLocal: toLocalInput(event.endsAt),
     status: event.status,
+    imageUrl: event.imageUrl,
+    imageFile: null,
+    removeImage: false,
+  };
+}
+
+async function fileToBase64Payload(file: File): Promise<{
+  dataBase64: string;
+  contentType: string;
+}> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return {
+    dataBase64: btoa(binary),
+    contentType: file.type || "application/octet-stream",
   };
 }
 
@@ -110,6 +140,7 @@ function ManageEventsPage() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   if (isPending) return null;
   if (!user) return <RedirectToSignIn />;
@@ -148,11 +179,28 @@ function ManageEventsPage() {
     await router.invalidate();
   }
 
+  function clearPreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
+      let imageUrl: string | null | undefined = undefined;
+      if (form.imageFile) {
+        const payload = await fileToBase64Payload(form.imageFile);
+        const uploaded = await uploadEventImage({ data: payload });
+        imageUrl = uploaded.imageUrl;
+      } else if (form.removeImage) {
+        imageUrl = null;
+      } else if (!form.id) {
+        imageUrl = null;
+      }
+      // else: omit imageUrl on update → leave unchanged
+
       const payload = {
         title: form.title,
         description: form.description,
@@ -162,12 +210,14 @@ function ManageEventsPage() {
         startsAt: fromLocalInput(form.startsAtLocal),
         endsAt: form.endsAtLocal ? fromLocalInput(form.endsAtLocal) : null,
         status: form.status,
+        ...(imageUrl !== undefined ? { imageUrl } : {}),
       };
       if (form.id) {
         await updateEvent({ data: { id: form.id, ...payload } });
       } else {
         await createEvent({ data: payload });
       }
+      clearPreview();
       setForm(emptyForm());
       setOpen(false);
       await refresh();
@@ -191,6 +241,10 @@ function ManageEventsPage() {
       setBusy(false);
     }
   }
+
+  const shownImage =
+    previewUrl ||
+    (!form.removeImage && form.imageUrl ? form.imageUrl : null);
 
   return (
     <>
@@ -225,6 +279,7 @@ function ManageEventsPage() {
               variant="gold"
               size="sm"
               onClick={() => {
+                clearPreview();
                 setForm(emptyForm());
                 setOpen(true);
                 setError(null);
@@ -273,6 +328,55 @@ function ManageEventsPage() {
                   onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
                   maxLength={500}
                 />
+              </Field>
+              <Field label="Event image (optional)">
+                <div className="grid gap-3">
+                  {shownImage ? (
+                    <img
+                      src={shownImage}
+                      alt=""
+                      className="h-40 w-full max-w-md rounded-lg border border-border object-cover"
+                    />
+                  ) : (
+                    <p className="text-xs text-muted">
+                      JPEG, PNG, WebP, or GIF up to 5 MB.
+                    </p>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="block w-full text-sm text-navy file:mr-3 file:rounded-lg file:border-0 file:bg-navy file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-cream"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      clearPreview();
+                      if (file) {
+                        setPreviewUrl(URL.createObjectURL(file));
+                        setForm((f) => ({
+                          ...f,
+                          imageFile: file,
+                          removeImage: false,
+                        }));
+                      } else {
+                        setForm((f) => ({ ...f, imageFile: null }));
+                      }
+                    }}
+                  />
+                  {form.imageUrl && !form.imageFile ? (
+                    <label className="flex items-center gap-2 text-sm text-navy">
+                      <input
+                        type="checkbox"
+                        checked={form.removeImage}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            removeImage: e.target.checked,
+                          }))
+                        }
+                      />
+                      Remove current image
+                    </label>
+                  ) : null}
+                </div>
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Starts" required>
@@ -342,6 +446,7 @@ function ManageEventsPage() {
                   disabled={busy}
                   onClick={() => {
                     setOpen(false);
+                    clearPreview();
                     setForm(emptyForm());
                   }}
                 >
@@ -357,15 +462,24 @@ function ManageEventsPage() {
                 key={event.id}
                 className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-navy">{event.title}</h3>
-                    <StatusBadge status={event.status} />
+                <div className="flex min-w-0 flex-1 gap-3">
+                  {event.imageUrl ? (
+                    <img
+                      src={event.imageUrl}
+                      alt=""
+                      className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                    />
+                  ) : null}
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold text-navy">{event.title}</h3>
+                      <StatusBadge status={event.status} />
+                    </div>
+                    <p className="mt-1 text-sm text-muted">
+                      {formatEventDate(event.startsAt)} · {formatEventTimeRange(event)}
+                      {event.location ? ` · ${event.location}` : ""}
+                    </p>
                   </div>
-                  <p className="mt-1 text-sm text-muted">
-                    {formatEventDate(event.startsAt)} · {formatEventTimeRange(event)}
-                    {event.location ? ` · ${event.location}` : ""}
-                  </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <Button
@@ -374,6 +488,7 @@ function ManageEventsPage() {
                     variant="outline"
                     disabled={busy}
                     onClick={() => {
+                      clearPreview();
                       setForm(eventToForm(event));
                       setOpen(true);
                       setError(null);

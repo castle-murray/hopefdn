@@ -25,6 +25,7 @@ type EventRow = {
   location: string;
   cta_label: string;
   cta_url: string | null;
+  image_url: string | null;
   starts_at: string | Date;
   ends_at: string | Date | null;
   status: EventStatus;
@@ -47,11 +48,15 @@ function mapRow(row: EventRow): CalendarEvent {
     location: row.location,
     ctaLabel: row.cta_label,
     ctaUrl: row.cta_url,
+    imageUrl: row.image_url ?? null,
     startsAt: toIso(row.starts_at) as string,
     endsAt: toIso(row.ends_at),
     status: row.status,
   };
 }
+
+const EVENT_SELECT = `id, slug, title, description, location, cta_label, cta_url,
+             image_url, starts_at, ends_at, status`;
 
 function clampLimit(limit?: number): number {
   if (limit == null || !Number.isFinite(limit)) return DEFAULT_LIMIT;
@@ -174,8 +179,7 @@ export const listEvents = createServerFn({ method: "GET" })
 
     params.push(limit + 1); // fetch one extra to detect hasMore
     const text = `
-      select id, slug, title, description, location, cta_label, cta_url,
-             starts_at, ends_at, status
+      select ${EVENT_SELECT}
       from events
       where ${where.join(" and ")}
       order by starts_at asc, id asc
@@ -200,8 +204,7 @@ export const getEvent = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<CalendarEvent | null> => {
     const sql = await getSql();
     const rows = await sql.query<EventRow>(
-      `select id, slug, title, description, location, cta_label, cta_url,
-              starts_at, ends_at, status
+      `select ${EVENT_SELECT}
        from events
        where id = $1 or slug = $1
        limit 1`,
@@ -239,7 +242,25 @@ const mutateSchema = z.object({
     .max(100)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
     .optional(),
+  /** Set to a /uploads/events/… path after upload, or null to clear. Omit to leave unchanged on update. */
+  imageUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .nullable()
+    .optional(),
 });
+
+function assertSafeImageUrl(imageUrl: string | null | undefined): string | null {
+  if (imageUrl == null || imageUrl === "") return null;
+  if (!imageUrl.startsWith("/uploads/events/")) {
+    throw new Error("imageUrl must be an uploaded event image path");
+  }
+  if (imageUrl.includes("..") || imageUrl.includes("//")) {
+    throw new Error("Invalid imageUrl");
+  }
+  return imageUrl;
+}
 
 export const createEvent = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -251,20 +272,22 @@ export const createEvent = createServerFn({ method: "POST" })
       throw new Error("endsAt must be on or after startsAt");
     }
 
+    const imageUrl =
+      data.imageUrl === undefined ? null : assertSafeImageUrl(data.imageUrl);
+
     const sql = await getSql();
     const id = crypto.randomUUID();
     const slug = await uniqueSlug(data.slug ?? slugify(data.title));
 
     const rows = await sql.query<EventRow>(
       `insert into events (
-         id, slug, title, description, location, cta_label, cta_url,
+         id, slug, title, description, location, cta_label, cta_url, image_url,
          starts_at, ends_at, status, created_by, updated_by
        ) values (
-         $1, $2, $3, $4, $5, $6, $7,
-         $8::timestamptz, $9::timestamptz, $10, $11, $11
+         $1, $2, $3, $4, $5, $6, $7, $8,
+         $9::timestamptz, $10::timestamptz, $11, $12, $12
        )
-       returning id, slug, title, description, location, cta_label, cta_url,
-                 starts_at, ends_at, status`,
+       returning ${EVENT_SELECT}`,
       [
         id,
         slug,
@@ -273,6 +296,7 @@ export const createEvent = createServerFn({ method: "POST" })
         data.location,
         data.ctaLabel,
         data.ctaUrl ?? null,
+        imageUrl,
         data.startsAt,
         data.endsAt ?? null,
         data.status,
@@ -297,13 +321,23 @@ export const updateEvent = createServerFn({ method: "POST" })
     }
 
     const sql = await getSql();
-    const existing = await sql.query<{ id: string }>(
-      `select id from events where id = $1 limit 1`,
+    const existing = await sql.query<{ id: string; image_url: string | null }>(
+      `select id, image_url from events where id = $1 limit 1`,
       [data.id],
     );
     if (existing.length === 0) throw new Error("Event not found");
 
     const slug = await uniqueSlug(data.slug ?? slugify(data.title), data.id);
+
+    let nextImageUrl = existing[0]!.image_url;
+    let previousToDelete: string | null = null;
+    if (data.imageUrl !== undefined) {
+      const asserted = assertSafeImageUrl(data.imageUrl);
+      if (asserted !== existing[0]!.image_url) {
+        previousToDelete = existing[0]!.image_url;
+      }
+      nextImageUrl = asserted;
+    }
 
     const rows = await sql.query<EventRow>(
       `update events set
@@ -313,14 +347,14 @@ export const updateEvent = createServerFn({ method: "POST" })
          location = $5,
          cta_label = $6,
          cta_url = $7,
-         starts_at = $8::timestamptz,
-         ends_at = $9::timestamptz,
-         status = $10,
-         updated_by = $11,
+         image_url = $8,
+         starts_at = $9::timestamptz,
+         ends_at = $10::timestamptz,
+         status = $11,
+         updated_by = $12,
          updated_at = now()
        where id = $1
-       returning id, slug, title, description, location, cta_label, cta_url,
-                 starts_at, ends_at, status`,
+       returning ${EVENT_SELECT}`,
       [
         data.id,
         slug,
@@ -329,12 +363,19 @@ export const updateEvent = createServerFn({ method: "POST" })
         data.location,
         data.ctaLabel,
         data.ctaUrl ?? null,
+        nextImageUrl,
         data.startsAt,
         data.endsAt ?? null,
         data.status,
         context.userId,
       ],
     );
+
+    if (previousToDelete) {
+      const { deleteEventImageFile } = await import("./upload.server");
+      await deleteEventImageFile(previousToDelete).catch(() => undefined);
+    }
+
     return mapRow(rows[0]!);
   });
 
@@ -345,12 +386,30 @@ export const deleteEvent = createServerFn({ method: "POST" })
     await requireStaff(context.userId);
 
     const sql = await getSql();
-    const rows = await sql.query<{ id: string }>(
-      `delete from events where id = $1 returning id`,
+    const rows = await sql.query<{ id: string; image_url: string | null }>(
+      `delete from events where id = $1 returning id, image_url`,
       [data.id],
     );
     if (rows.length === 0) throw new Error("Event not found");
+    const { deleteEventImageFile } = await import("./upload.server");
+    await deleteEventImageFile(rows[0]!.image_url).catch(() => undefined);
     return { ok: true };
+  });
+
+const uploadSchema = z.object({
+  /** Raw base64 payload (no data: URL prefix). */
+  dataBase64: z.string().min(1).max(7_500_000),
+  contentType: z.string().min(3).max(100),
+});
+
+/** Staff-only: write image bytes to disk and return the public path. */
+export const uploadEventImage = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((raw: unknown) => uploadSchema.parse(raw))
+  .handler(async ({ data, context }): Promise<{ imageUrl: string }> => {
+    await requireStaff(context.userId);
+    const { saveEventImage } = await import("./upload.server");
+    return saveEventImage(data);
   });
 
 /** Whether the current session can manage the calendar (staff or admin role). */

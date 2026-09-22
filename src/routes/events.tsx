@@ -83,53 +83,66 @@ function EventsPage() {
               {events.map((event) => (
                 <article
                   key={event.id}
-                  className="grid gap-6 rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)] md:grid-cols-[auto_1fr_auto] md:items-center md:p-8"
+                  className="grid gap-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)] md:grid-cols-[auto_1fr_auto] md:items-center"
                 >
-                  <div className="flex h-20 w-20 flex-col items-center justify-center rounded-xl gradient-navy text-center text-cream">
-                    <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-gold">
-                      {formatEventMonth(event.startsAt)}
-                    </span>
-                    <span className="font-display text-2xl font-semibold leading-none">
-                      {formatEventDay(event.startsAt)}
-                    </span>
-                  </div>
-                  <div>
-                    <h2 className="font-display text-2xl font-semibold text-navy">
-                      {event.title}
-                    </h2>
-                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Calendar className="size-4 text-gold-dark" aria-hidden />
-                        {formatEventDate(event.startsAt)}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <Clock className="size-4 text-gold-dark" aria-hidden />
-                        {formatEventTimeRange(event)}
-                      </span>
-                      {event.location ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <MapPin className="size-4 text-gold-dark" aria-hidden />
-                          {event.location}
-                        </span>
-                      ) : null}
+                  {event.imageUrl ? (
+                    <div className="md:col-span-3">
+                      <img
+                        src={event.imageUrl}
+                        alt=""
+                        className="aspect-[21/9] w-full object-cover sm:aspect-[3/1]"
+                        loading="lazy"
+                        decoding="async"
+                      />
                     </div>
-                    <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
-                      {event.description}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2 md:items-end">
-                    <Button asChild variant="default">
-                      {event.ctaUrl ? (
-                        <a href={event.ctaUrl} target="_blank" rel="noopener noreferrer">
-                          {event.ctaLabel}
-                        </a>
-                      ) : (
-                        <a href={site.emailHref}>{event.ctaLabel}</a>
-                      )}
-                    </Button>
-                    <Button asChild variant="outline" size="sm">
-                      <Link to="/get-involved">Volunteer</Link>
-                    </Button>
+                  ) : null}
+                  <div className="flex flex-col gap-6 p-6 md:col-span-3 md:grid md:grid-cols-[auto_1fr_auto] md:items-center md:p-8">
+                    <div className="flex h-20 w-20 flex-col items-center justify-center rounded-xl gradient-navy text-center text-cream">
+                      <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-gold">
+                        {formatEventMonth(event.startsAt)}
+                      </span>
+                      <span className="font-display text-2xl font-semibold leading-none">
+                        {formatEventDay(event.startsAt)}
+                      </span>
+                    </div>
+                    <div>
+                      <h2 className="font-display text-2xl font-semibold text-navy">
+                        {event.title}
+                      </h2>
+                      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Calendar className="size-4 text-gold-dark" aria-hidden />
+                          {formatEventDate(event.startsAt)}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock className="size-4 text-gold-dark" aria-hidden />
+                          {formatEventTimeRange(event)}
+                        </span>
+                        {event.location ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <MapPin className="size-4 text-gold-dark" aria-hidden />
+                            {event.location}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
+                        {event.description}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 md:items-end">
+                      <Button asChild variant="default">
+                        {event.ctaUrl ? (
+                          <a href={event.ctaUrl} target="_blank" rel="noopener noreferrer">
+                            {event.ctaLabel}
+                          </a>
+                        ) : (
+                          <a href={site.emailHref}>{event.ctaLabel}</a>
+                        )}
+                      </Button>
+                      <Button asChild variant="outline" size="sm">
+                        <Link to="/get-involved">Volunteer</Link>
+                      </Button>
+                    </div>
                   </div>
                 </article>
               ))}

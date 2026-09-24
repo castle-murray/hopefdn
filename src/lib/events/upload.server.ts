@@ -1,12 +1,15 @@
 /**
- * Staff event image uploads — single optional file per event.
+ * Staff event image uploads — flyer and/or banner per event.
  * Files land under public/uploads/events/ (or UPLOAD_EVENTS_DIR) and are
  * served at /uploads/events/:name (static + API fallback).
+ * Same storage dir for flyer + banner; callers map returned URL to imageUrl or bannerUrl.
  */
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export const EVENT_UPLOAD_PUBLIC_PREFIX = "/uploads/events";
+
+export type EventImagePurpose = "flyer" | "banner";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MiB
 const ALLOWED_TYPES: Record<string, string> = {
@@ -49,14 +52,26 @@ function extForContentType(contentType: string): string | null {
   return ALLOWED_TYPES[normalized] ?? null;
 }
 
+export type SaveEventImageResult = {
+  /** Canonical public path. */
+  url: string;
+  purpose: EventImagePurpose;
+  /** Alias when purpose=flyer (Celeste / desk flyer path). */
+  imageUrl?: string;
+  /** Alias when purpose=banner. */
+  bannerUrl?: string;
+};
+
 /**
  * Persist a staff-uploaded image. Returns the public URL path.
  * `dataBase64` is raw base64 (no data: URL prefix).
+ * `purpose` defaults to "flyer" — banner uses the same storage dir.
  */
 export async function saveEventImage(input: {
   dataBase64: string;
   contentType: string;
-}): Promise<{ imageUrl: string }> {
+  purpose?: EventImagePurpose;
+}): Promise<SaveEventImageResult> {
   const ext = extForContentType(input.contentType);
   if (!ext) {
     throw new Error("Invalid image type. Use JPEG, PNG, WebP, or GIF.");
@@ -83,7 +98,12 @@ export async function saveEventImage(input: {
   const filename = `${crypto.randomUUID()}.${ext}`;
   const full = path.join(dir, filename);
   await writeFile(full, buffer, { flag: "wx" });
-  return { imageUrl: `${EVENT_UPLOAD_PUBLIC_PREFIX}/${filename}` };
+  const url = `${EVENT_UPLOAD_PUBLIC_PREFIX}/${filename}`;
+  const purpose: EventImagePurpose = input.purpose ?? "flyer";
+  if (purpose === "banner") {
+    return { url, purpose, bannerUrl: url };
+  }
+  return { url, purpose, imageUrl: url };
 }
 
 export async function deleteEventImageFile(

@@ -60,12 +60,18 @@ type FormState = {
   startsAtLocal: string;
   endsAtLocal: string;
   status: EventStatus;
-  /** Existing saved path, if any. */
+  /** Existing flyer path, if any. */
   imageUrl: string | null;
-  /** Local file chosen for upload (not yet saved). */
+  /** Local flyer file chosen for upload (not yet saved). */
   imageFile: File | null;
-  /** Clear existing image on save. */
+  /** Clear existing flyer on save. */
   removeImage: boolean;
+  /** Existing banner/hero path, if any. */
+  bannerUrl: string | null;
+  /** Local banner file chosen for upload (not yet saved). */
+  bannerFile: File | null;
+  /** Clear existing banner on save. */
+  removeBanner: boolean;
 };
 
 const emptyForm = (): FormState => ({
@@ -80,6 +86,9 @@ const emptyForm = (): FormState => ({
   imageUrl: null,
   imageFile: null,
   removeImage: false,
+  bannerUrl: null,
+  bannerFile: null,
+  removeBanner: false,
 });
 
 function toLocalInput(iso: string | null | undefined): string {
@@ -111,6 +120,9 @@ function eventToForm(event: CalendarEvent): FormState {
     imageUrl: event.imageUrl,
     imageFile: null,
     removeImage: false,
+    bannerUrl: event.bannerUrl,
+    bannerFile: null,
+    removeBanner: false,
   };
 }
 
@@ -141,6 +153,7 @@ function ManageEventsPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
 
   if (isPending) return null;
   if (!user) return <RedirectToSignIn />;
@@ -184,6 +197,16 @@ function ManageEventsPage() {
     setPreviewUrl(null);
   }
 
+  function clearBannerPreview() {
+    if (bannerPreviewUrl) URL.revokeObjectURL(bannerPreviewUrl);
+    setBannerPreviewUrl(null);
+  }
+
+  function clearAllPreviews() {
+    clearPreview();
+    clearBannerPreview();
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -192,14 +215,30 @@ function ManageEventsPage() {
       let imageUrl: string | null | undefined = undefined;
       if (form.imageFile) {
         const payload = await fileToBase64Payload(form.imageFile);
-        const uploaded = await uploadEventImage({ data: payload });
-        imageUrl = uploaded.imageUrl;
+        const uploaded = await uploadEventImage({
+          data: { ...payload, purpose: "flyer" },
+        });
+        imageUrl = uploaded.imageUrl ?? uploaded.url;
       } else if (form.removeImage) {
         imageUrl = null;
       } else if (!form.id) {
         imageUrl = null;
       }
       // else: omit imageUrl on update → leave unchanged
+
+      let bannerUrl: string | null | undefined = undefined;
+      if (form.bannerFile) {
+        const payload = await fileToBase64Payload(form.bannerFile);
+        const uploaded = await uploadEventImage({
+          data: { ...payload, purpose: "banner" },
+        });
+        bannerUrl = uploaded.bannerUrl ?? uploaded.url;
+      } else if (form.removeBanner) {
+        bannerUrl = null;
+      } else if (!form.id) {
+        bannerUrl = null;
+      }
+      // else: omit bannerUrl on update → leave unchanged
 
       const payload = {
         title: form.title,
@@ -211,13 +250,14 @@ function ManageEventsPage() {
         endsAt: form.endsAtLocal ? fromLocalInput(form.endsAtLocal) : null,
         status: form.status,
         ...(imageUrl !== undefined ? { imageUrl } : {}),
+        ...(bannerUrl !== undefined ? { bannerUrl } : {}),
       };
       if (form.id) {
         await updateEvent({ data: { id: form.id, ...payload } });
       } else {
         await createEvent({ data: payload });
       }
-      clearPreview();
+      clearAllPreviews();
       setForm(emptyForm());
       setOpen(false);
       await refresh();
@@ -245,6 +285,9 @@ function ManageEventsPage() {
   const shownImage =
     previewUrl ||
     (!form.removeImage && form.imageUrl ? form.imageUrl : null);
+  const shownBanner =
+    bannerPreviewUrl ||
+    (!form.removeBanner && form.bannerUrl ? form.bannerUrl : null);
 
   return (
     <>
@@ -279,7 +322,7 @@ function ManageEventsPage() {
               variant="gold"
               size="sm"
               onClick={() => {
-                clearPreview();
+                clearAllPreviews();
                 setForm(emptyForm());
                 setOpen(true);
                 setError(null);
@@ -329,7 +372,7 @@ function ManageEventsPage() {
                   maxLength={500}
                 />
               </Field>
-              <Field label="Event image (optional)">
+              <Field label="Event image / flyer (optional)">
                 <div className="grid gap-3">
                   {shownImage ? (
                     <img
@@ -339,7 +382,7 @@ function ManageEventsPage() {
                     />
                   ) : (
                     <p className="text-xs text-muted">
-                      JPEG, PNG, WebP, or GIF up to 5 MB.
+                      Card/lightbox flyer. JPEG, PNG, WebP, or GIF up to 5 MB.
                     </p>
                   )}
                   <input
@@ -373,7 +416,57 @@ function ManageEventsPage() {
                           }))
                         }
                       />
-                      Remove current image
+                      Remove current flyer
+                    </label>
+                  ) : null}
+                </div>
+              </Field>
+              <Field label="Event banner / hero (optional)">
+                <div className="grid gap-3">
+                  {shownBanner ? (
+                    <img
+                      src={shownBanner}
+                      alt=""
+                      className="h-28 w-full max-w-lg rounded-lg border border-border object-cover"
+                    />
+                  ) : (
+                    <p className="text-xs text-muted">
+                      Wide banner for /events hero + homepage Events tile. Separate
+                      from the flyer. JPEG, PNG, WebP, or GIF up to 5 MB.
+                    </p>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="block w-full text-sm text-navy file:mr-3 file:rounded-lg file:border-0 file:bg-navy file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-cream"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      clearBannerPreview();
+                      if (file) {
+                        setBannerPreviewUrl(URL.createObjectURL(file));
+                        setForm((f) => ({
+                          ...f,
+                          bannerFile: file,
+                          removeBanner: false,
+                        }));
+                      } else {
+                        setForm((f) => ({ ...f, bannerFile: null }));
+                      }
+                    }}
+                  />
+                  {form.bannerUrl && !form.bannerFile ? (
+                    <label className="flex items-center gap-2 text-sm text-navy">
+                      <input
+                        type="checkbox"
+                        checked={form.removeBanner}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            removeBanner: e.target.checked,
+                          }))
+                        }
+                      />
+                      Remove current banner
                     </label>
                   ) : null}
                 </div>
@@ -446,7 +539,7 @@ function ManageEventsPage() {
                   disabled={busy}
                   onClick={() => {
                     setOpen(false);
-                    clearPreview();
+                    clearAllPreviews();
                     setForm(emptyForm());
                   }}
                 >
@@ -488,7 +581,7 @@ function ManageEventsPage() {
                     variant="outline"
                     disabled={busy}
                     onClick={() => {
-                      clearPreview();
+                      clearAllPreviews();
                       setForm(eventToForm(event));
                       setOpen(true);
                       setError(null);

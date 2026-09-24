@@ -1,12 +1,16 @@
 /**
- * Bearer-auth multipart flyer upload for Celeste/curl.
+ * Bearer-auth multipart flyer/banner upload for Celeste/curl.
  * POST /api/mcp/events/upload  field name: file
+ * Optional form field: purpose=flyer|banner (default flyer)
  * Auth: same as /mcp — Authorization Bearer or X-API-Key.
- * Returns JSON { imageUrl: "/uploads/events/<uuid>.<ext>" }
+ * Returns JSON { url, purpose, imageUrl? } or { url, purpose, bannerUrl? }
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { McpAuthError, requireMcpApiKey } from "@/lib/events/mcp-auth";
-import { saveEventImage } from "@/lib/events/upload.server";
+import {
+  saveEventImage,
+  type EventImagePurpose,
+} from "@/lib/events/upload.server";
 
 async function uploadHandler({ request }: { request: Request }): Promise<Response> {
   try {
@@ -39,6 +43,12 @@ async function uploadHandler({ request }: { request: Request }): Promise<Respons
       );
     }
 
+    const purposeRaw = String(form.get("purpose") ?? "flyer")
+      .trim()
+      .toLowerCase();
+    const purpose: EventImagePurpose =
+      purposeRaw === "banner" ? "banner" : "flyer";
+
     const blob = file as File;
     const buf = Buffer.from(await blob.arrayBuffer());
     const contentType =
@@ -49,6 +59,7 @@ async function uploadHandler({ request }: { request: Request }): Promise<Respons
     const result = await saveEventImage({
       dataBase64: buf.toString("base64"),
       contentType,
+      purpose,
     });
 
     return new Response(JSON.stringify(result), {

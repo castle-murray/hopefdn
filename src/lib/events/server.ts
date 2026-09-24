@@ -26,6 +26,7 @@ type EventRow = {
   cta_label: string;
   cta_url: string | null;
   image_url: string | null;
+  banner_url: string | null;
   starts_at: string | Date;
   ends_at: string | Date | null;
   status: EventStatus;
@@ -49,6 +50,7 @@ function mapRow(row: EventRow): CalendarEvent {
     ctaLabel: row.cta_label,
     ctaUrl: row.cta_url,
     imageUrl: row.image_url ?? null,
+    bannerUrl: row.banner_url ?? null,
     startsAt: toIso(row.starts_at) as string,
     endsAt: toIso(row.ends_at),
     status: row.status,
@@ -56,7 +58,7 @@ function mapRow(row: EventRow): CalendarEvent {
 }
 
 const EVENT_SELECT = `id, slug, title, description, location, cta_label, cta_url,
-             image_url, starts_at, ends_at, status`;
+             image_url, banner_url, starts_at, ends_at, status`;
 
 function clampLimit(limit?: number): number {
   if (limit == null || !Number.isFinite(limit)) return DEFAULT_LIMIT;
@@ -242,8 +244,15 @@ const mutateSchema = z.object({
     .max(100)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
     .optional(),
-  /** Set to a /uploads/events/… path after upload, or null to clear. Omit to leave unchanged on update. */
+  /** Flyer: /uploads/events/… path after upload, or null to clear. Omit to leave unchanged on update. */
   imageUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .nullable()
+    .optional(),
+  /** Banner/hero: separate from flyer. Same path rules. Omit to leave unchanged on update. */
+  bannerUrl: z
     .string()
     .trim()
     .max(500)
@@ -254,7 +263,7 @@ const mutateSchema = z.object({
 function assertSafeImageUrl(imageUrl: string | null | undefined): string | null {
   if (imageUrl == null || imageUrl === "") return null;
   if (!imageUrl.startsWith("/uploads/events/")) {
-    throw new Error("imageUrl must be an uploaded event image path");
+    throw new Error("image path must be an uploaded event image under /uploads/events/");
   }
   if (imageUrl.includes("..") || imageUrl.includes("//")) {
     throw new Error("Invalid imageUrl");
@@ -274,6 +283,8 @@ export const createEvent = createServerFn({ method: "POST" })
 
     const imageUrl =
       data.imageUrl === undefined ? null : assertSafeImageUrl(data.imageUrl);
+    const bannerUrl =
+      data.bannerUrl === undefined ? null : assertSafeImageUrl(data.bannerUrl);
 
     const sql = await getSql();
     const id = crypto.randomUUID();
@@ -281,11 +292,11 @@ export const createEvent = createServerFn({ method: "POST" })
 
     const rows = await sql.query<EventRow>(
       `insert into events (
-         id, slug, title, description, location, cta_label, cta_url, image_url,
+         id, slug, title, description, location, cta_label, cta_url, image_url, banner_url,
          starts_at, ends_at, status, created_by, updated_by
        ) values (
-         $1, $2, $3, $4, $5, $6, $7, $8,
-         $9::timestamptz, $10::timestamptz, $11, $12, $12
+         $1, $2, $3, $4, $5, $6, $7, $8, $9,
+         $10::timestamptz, $11::timestamptz, $12, $13, $13
        )
        returning ${EVENT_SELECT}`,
       [
@@ -297,6 +308,7 @@ export const createEvent = createServerFn({ method: "POST" })
         data.ctaLabel,
         data.ctaUrl ?? null,
         imageUrl,
+        bannerUrl,
         data.startsAt,
         data.endsAt ?? null,
         data.status,
@@ -321,8 +333,12 @@ export const updateEvent = createServerFn({ method: "POST" })
     }
 
     const sql = await getSql();
-    const existing = await sql.query<{ id: string; image_url: string | null }>(
-      `select id, image_url from events where id = $1 limit 1`,
+    const existing = await sql.query<{
+      id: string;
+      image_url: string | null;
+      banner_url: string | null;
+    }>(
+      `select id, image_url, banner_url from events where id = $1 limit 1`,
       [data.id],
     );
     if (existing.length === 0) throw new Error("Event not found");
@@ -330,13 +346,21 @@ export const updateEvent = createServerFn({ method: "POST" })
     const slug = await uniqueSlug(data.slug ?? slugify(data.title), data.id);
 
     let nextImageUrl = existing[0]!.image_url;
-    let previousToDelete: string | null = null;
+    let nextBannerUrl = existing[0]!.banner_url;
+    const previousToDelete: string[] = [];
     if (data.imageUrl !== undefined) {
       const asserted = assertSafeImageUrl(data.imageUrl);
-      if (asserted !== existing[0]!.image_url) {
-        previousToDelete = existing[0]!.image_url;
+      if (asserted !== existing[0]!.image_url && existing[0]!.image_url) {
+        previousToDelete.push(existing[0]!.image_url);
       }
       nextImageUrl = asserted;
+    }
+    if (data.bannerUrl !== undefined) {
+      const asserted = assertSafeImageUrl(data.bannerUrl);
+      if (asserted !== existing[0]!.banner_url && existing[0]!.banner_url) {
+        previousToDelete.push(existing[0]!.banner_url);
+      }
+      nextBannerUrl = asserted;
     }
 
     const rows = await sql.query<EventRow>(
@@ -348,10 +372,11 @@ export const updateEvent = createServerFn({ method: "POST" })
          cta_label = $6,
          cta_url = $7,
          image_url = $8,
-         starts_at = $9::timestamptz,
-         ends_at = $10::timestamptz,
-         status = $11,
-         updated_by = $12,
+         banner_url = $9,
+         starts_at = $10::timestamptz,
+         ends_at = $11::timestamptz,
+         status = $12,
+         updated_by = $13,
          updated_at = now()
        where id = $1
        returning ${EVENT_SELECT}`,
@@ -364,6 +389,7 @@ export const updateEvent = createServerFn({ method: "POST" })
         data.ctaLabel,
         data.ctaUrl ?? null,
         nextImageUrl,
+        nextBannerUrl,
         data.startsAt,
         data.endsAt ?? null,
         data.status,
@@ -371,9 +397,13 @@ export const updateEvent = createServerFn({ method: "POST" })
       ],
     );
 
-    if (previousToDelete) {
+    if (previousToDelete.length) {
       const { deleteEventImageFile } = await import("./upload.server");
-      await deleteEventImageFile(previousToDelete).catch(() => undefined);
+      for (const path of previousToDelete) {
+        // Never delete the other role's file if paths somehow collide.
+        if (path === nextImageUrl || path === nextBannerUrl) continue;
+        await deleteEventImageFile(path).catch(() => undefined);
+      }
     }
 
     return mapRow(rows[0]!);
@@ -386,13 +416,18 @@ export const deleteEvent = createServerFn({ method: "POST" })
     await requireStaff(context.userId);
 
     const sql = await getSql();
-    const rows = await sql.query<{ id: string; image_url: string | null }>(
-      `delete from events where id = $1 returning id, image_url`,
+    const rows = await sql.query<{
+      id: string;
+      image_url: string | null;
+      banner_url: string | null;
+    }>(
+      `delete from events where id = $1 returning id, image_url, banner_url`,
       [data.id],
     );
     if (rows.length === 0) throw new Error("Event not found");
     const { deleteEventImageFile } = await import("./upload.server");
     await deleteEventImageFile(rows[0]!.image_url).catch(() => undefined);
+    await deleteEventImageFile(rows[0]!.banner_url).catch(() => undefined);
     return { ok: true };
   });
 
@@ -400,17 +435,44 @@ const uploadSchema = z.object({
   /** Raw base64 payload (no data: URL prefix). */
   dataBase64: z.string().min(1).max(7_500_000),
   contentType: z.string().min(3).max(100),
+  /** flyer (default) → imageUrl; banner → bannerUrl. Same storage dir. */
+  purpose: z.enum(["flyer", "banner"]).optional(),
 });
 
-/** Staff-only: write image bytes to disk and return the public path. */
+/** Staff-only: write image bytes to disk and return the public path (+ purpose aliases). */
 export const uploadEventImage = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((raw: unknown) => uploadSchema.parse(raw))
-  .handler(async ({ data, context }): Promise<{ imageUrl: string }> => {
+  .handler(async ({ data, context }) => {
     await requireStaff(context.userId);
     const { saveEventImage } = await import("./upload.server");
     return saveEventImage(data);
   });
+
+
+/**
+ * Soonest published event with startsAt >= now (public hero / homepage Events tile).
+ * Plain async helper — usable from loaders without createServerFn wrapping.
+ */
+export async function fetchNextUpcomingPublishedEvent(): Promise<CalendarEvent | null> {
+  const sql = await getSql();
+  const rows = await sql.query<EventRow>(
+    `select ${EVENT_SELECT}
+     from events
+     where status = 'published'
+       and starts_at >= $1::timestamptz
+     order by starts_at asc, id asc
+     limit 1`,
+    [new Date().toISOString()],
+  );
+  const row = rows[0];
+  return row ? mapRow(row) : null;
+}
+
+/** Server-fn wrapper for fetchNextUpcomingPublishedEvent. */
+export const getNextUpcomingPublishedEvent = createServerFn({ method: "GET" }).handler(
+  async (): Promise<CalendarEvent | null> => fetchNextUpcomingPublishedEvent(),
+);
 
 /** Whether the current session can manage the calendar (staff or admin role). */
 export const canManageEvents = createServerFn({ method: "GET" }).handler(

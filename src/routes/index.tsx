@@ -6,14 +6,17 @@ import {
   Heart,
   HeartHandshake,
   HandHeart,
-  Phone,
   ShoppingBag,
   Users,
 } from "lucide-react";
 import { AnniversaryBadge } from "@/components/anniversary-badge";
 import { Button } from "@/components/ui/button";
 import { impactStats, quickLinks, site } from "@/data/site";
-import { listEvents } from "@/lib/events/server";
+import {
+  fetchNextUpcomingPublishedEvent,
+  listEvents,
+} from "@/lib/events/server";
+import { resolveEventHeroUrl } from "@/lib/events/types";
 import {
   formatEventDate,
   formatEventTimeRange,
@@ -27,7 +30,7 @@ import { getShopVisibility } from "@/lib/shop/server";
 
 export const Route = createFileRoute("/")({
   loader: async () => {
-    const [list, shop] = await Promise.all([
+    const [list, shop, nextUpcoming] = await Promise.all([
       listEvents({
         data: {
           from: new Date().toISOString(),
@@ -38,11 +41,14 @@ export const Route = createFileRoute("/")({
         publicEnabled: false,
         canAccess: false,
       })),
+      fetchNextUpcomingPublishedEvent(),
     ]);
     return {
       events: list.events,
       // Public storefront flag — card stays visible either way; "Coming soon" when off.
       shopPublic: shop.publicEnabled,
+      /** Next published event (startsAt >= now) — drives Events quick-link tile image. */
+      nextUpcoming,
     };
   },
   component: HomePage,
@@ -71,7 +77,8 @@ const quickLinkCardClass =
   "group relative flex min-h-[11.5rem] overflow-hidden rounded-2xl border border-border shadow-[var(--shadow-card)] transition sm:min-h-[13rem]";
 
 function HomePage() {
-  const { events, shopPublic } = Route.useLoaderData();
+  const { events, shopPublic, nextUpcoming } = Route.useLoaderData();
+  const eventsTileUrl = resolveEventHeroUrl(nextUpcoming);
   return (
     <>
       {/* Hero — cream wash + dark type (stronger scrim on mobile for legibility) */}
@@ -110,23 +117,6 @@ function HomePage() {
               </span>
             </p>
 
-            {/* Prominent guest CTA — hard to miss on mobile */}
-            <div className="mt-5 sm:mt-6">
-              <Button
-                asChild
-                variant="gold"
-                size="xl"
-                className="h-14 w-full max-w-md gap-2 rounded-xl px-6 text-base font-bold uppercase tracking-[0.06em] shadow-[var(--shadow-gold)] sm:w-auto sm:text-lg"
-              >
-                <Link to="/need-help-now">
-                  <Phone className="size-5" aria-hidden />
-                  Get Help Now
-                </Link>
-              </Button>
-              <p className="mt-2 text-xs font-medium text-navy/70 sm:text-sm">
-                Hungry, homeless, or need documents? Start here.
-              </p>
-            </div>
           </div>
 
           {/* CTAs sit below the copy column so a single compact row has room to fit */}
@@ -178,11 +168,26 @@ function HomePage() {
               const comingSoon =
                 item.href === "/legacy" && !shopPublic;
 
+              // Events tile: next upcoming banner → flyer → static quickLinks image.
+              const tileImage =
+                item.href === "/events" && eventsTileUrl
+                  ? eventsTileUrl
+                  : item.image;
+              const tileIsUpload = tileImage.startsWith("/uploads/");
+
               const media = (
                 <>
                   <img
-                    src={item.image.replace(/\.webp$/i, "-w800.webp")}
-                    srcSet={imgSrcSet(item.image, [...CARD_SRCSET_WIDTHS])}
+                    src={
+                      tileIsUpload
+                        ? tileImage
+                        : tileImage.replace(/\.webp$/i, "-w800.webp")
+                    }
+                    srcSet={
+                      tileIsUpload
+                        ? undefined
+                        : imgSrcSet(tileImage, [...CARD_SRCSET_WIDTHS])
+                    }
                     sizes={QUICK_LINK_SIZES}
                     alt=""
                     width={1200}
@@ -193,9 +198,11 @@ function HomePage() {
                         : "absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
                     }
                     style={
-                      "imagePosition" in item && item.imagePosition
-                        ? { objectPosition: item.imagePosition }
-                        : undefined
+                      tileIsUpload
+                        ? { objectPosition: "center" }
+                        : "imagePosition" in item && item.imagePosition
+                          ? { objectPosition: item.imagePosition }
+                          : undefined
                     }
                     loading="lazy"
                     decoding="async"

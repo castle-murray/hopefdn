@@ -61,7 +61,7 @@ function mimeFromFilename(name?: string): string | undefined {
 export function createHopeEventsMcpServer(): McpServer {
   const server = new McpServer({
     name: "hope-events",
-    version: "1.1.0",
+    version: "1.2.0",
   });
 
   server.registerTool(
@@ -119,7 +119,7 @@ export function createHopeEventsMcpServer(): McpServer {
     {
       title: "Upload event image",
       description:
-        "Upload a flyer image (JPEG/PNG/WebP/GIF, max 5 MB) via base64. Reuses desk saveEventImage. Returns { imageUrl: \"/uploads/events/<uuid>.<ext>\" } to pass into create_event / update_event. Prefer mime or filename so content-type is known; data:image/...;base64,... URLs accepted.",
+        "Upload a flyer or banner image (JPEG/PNG/WebP/GIF, max 5 MB) via base64. purpose=flyer (default) returns { url, purpose, imageUrl }; purpose=banner returns { url, purpose, bannerUrl }. Pass imageUrl/bannerUrl into create_event / update_event. Same /uploads/events/ storage dir. Prefer mime or filename; data:image/...;base64,... URLs accepted.",
       inputSchema: {
         dataBase64: z
           .string()
@@ -137,6 +137,10 @@ export function createHopeEventsMcpServer(): McpServer {
           .max(200)
           .optional()
           .describe("Optional original filename (used to guess mime)"),
+        purpose: z
+          .enum(["flyer", "banner"])
+          .optional()
+          .describe("flyer (default) → imageUrl; banner → bannerUrl"),
       },
     },
     async (args) => {
@@ -155,6 +159,7 @@ export function createHopeEventsMcpServer(): McpServer {
         const result = await saveEventImage({
           dataBase64: parsed.dataBase64,
           contentType,
+          purpose: args.purpose ?? "flyer",
         });
         return textResult(result);
       } catch (err) {
@@ -168,7 +173,7 @@ export function createHopeEventsMcpServer(): McpServer {
     {
       title: "Create event",
       description:
-        "Create a calendar event. imageUrl should be a path from upload_event_image (/uploads/events/...) or omit. Uses HOPE_EVENTS_MCP_ACTOR_USER_ID for created_by.",
+        "Create a calendar event. imageUrl/bannerUrl should be paths from upload_event_image (/uploads/events/...) or omit. Uses HOPE_EVENTS_MCP_ACTOR_USER_ID for created_by.",
       inputSchema: {
         title: z.string().trim().min(1).max(200),
         description: z.string().trim().max(5000).optional(),
@@ -191,7 +196,14 @@ export function createHopeEventsMcpServer(): McpServer {
           .max(500)
           .nullable()
           .optional()
-          .describe("/uploads/events/... or null"),
+          .describe("Flyer /uploads/events/... or null"),
+        bannerUrl: z
+          .string()
+          .trim()
+          .max(500)
+          .nullable()
+          .optional()
+          .describe("Banner/hero /uploads/events/... or null"),
       },
     },
     async (args) => {
@@ -210,7 +222,7 @@ export function createHopeEventsMcpServer(): McpServer {
     {
       title: "Update event",
       description:
-        "Partial update by id. Only provided fields change. imageUrl null clears flyer; omit leaves unchanged. Hard fields same as desk model.",
+        "Partial update by id. Only provided fields change. imageUrl/bannerUrl null clears that asset; omit leaves unchanged. Hard fields same as desk model.",
       inputSchema: {
         id: z.string().min(1).max(128),
         title: z.string().trim().min(1).max(200).optional(),
@@ -229,6 +241,7 @@ export function createHopeEventsMcpServer(): McpServer {
           .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
           .optional(),
         imageUrl: z.string().trim().max(500).nullable().optional(),
+        bannerUrl: z.string().trim().max(500).nullable().optional(),
       },
     },
     async (args) => {
@@ -247,7 +260,7 @@ export function createHopeEventsMcpServer(): McpServer {
     {
       title: "Delete event",
       description:
-        "HARD DELETE from Postgres (matches desk). Also removes linked /uploads/events image file when present. Prefer update_event status=cancelled for soft cancel.",
+        "HARD DELETE from Postgres (matches desk). Also removes linked flyer and banner /uploads/events files when present. Prefer update_event status=cancelled for soft cancel.",
       inputSchema: {
         id: z.string().min(1).max(128),
       },

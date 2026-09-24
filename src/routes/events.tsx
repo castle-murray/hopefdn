@@ -4,7 +4,12 @@ import { EventFlyerThumb } from "@/components/event-flyer-lightbox";
 import { PageHero } from "@/components/page-hero";
 import { Button } from "@/components/ui/button";
 import { site } from "@/data/site";
-import { canManageEvents, listEvents } from "@/lib/events/server";
+import {
+  canManageEvents,
+  fetchNextUpcomingPublishedEvent,
+  listEvents,
+} from "@/lib/events/server";
+import { resolveEventHeroUrl } from "@/lib/events/types";
 import {
   formatEventDate,
   formatEventDay,
@@ -12,9 +17,16 @@ import {
   formatEventTimeRange,
 } from "@/lib/events/format";
 
+const DEFAULT_EVENTS_HERO = {
+  src: "/images/events-experiences-w800.webp",
+  srcSet:
+    "/images/events-experiences-w800.webp 800w, /images/events-experiences-w1200.webp 1200w, /images/events-experiences.webp 1400w",
+  alt: "Guests in festive hats celebrating at a HOPE Foundation community event",
+} as const;
+
 export const Route = createFileRoute("/events")({
   loader: async () => {
-    const [list, canManage] = await Promise.all([
+    const [list, canManage, nextUpcoming] = await Promise.all([
       listEvents({
         data: {
           // Far window so signature multi-month calendars still load in one page;
@@ -24,8 +36,9 @@ export const Route = createFileRoute("/events")({
         },
       }),
       canManageEvents(),
+      fetchNextUpcomingPublishedEvent(),
     ]);
-    return { list, canManage };
+    return { list, canManage, nextUpcoming };
   },
   component: EventsPage,
   head: () => ({
@@ -34,8 +47,9 @@ export const Route = createFileRoute("/events")({
 });
 
 function EventsPage() {
-  const { list, canManage } = Route.useLoaderData();
+  const { list, canManage, nextUpcoming } = Route.useLoaderData();
   const { events } = list;
+  const heroUrl = resolveEventHeroUrl(nextUpcoming);
 
   return (
     <>
@@ -48,17 +62,33 @@ function EventsPage() {
       <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
-            <img
-              src="/images/events-experiences-w800.webp"
-              srcSet="/images/events-experiences-w800.webp 800w, /images/events-experiences-w1200.webp 1200w, /images/events-experiences.webp 1400w"
-              sizes="100vw"
-              alt="Guests in festive hats celebrating at a HOPE Foundation community event"
-              width={1400}
-              height={600}
-              className="aspect-[21/9] w-full object-cover object-[22%_32%]"
-              fetchPriority="high"
-              decoding="async"
-            />
+            {heroUrl ? (
+              <img
+                src={heroUrl}
+                alt={
+                  nextUpcoming
+                    ? `${nextUpcoming.title} — upcoming event banner`
+                    : DEFAULT_EVENTS_HERO.alt
+                }
+                width={1400}
+                height={600}
+                className="aspect-[21/9] w-full object-cover object-center"
+                fetchPriority="high"
+                decoding="async"
+              />
+            ) : (
+              <img
+                src={DEFAULT_EVENTS_HERO.src}
+                srcSet={DEFAULT_EVENTS_HERO.srcSet}
+                sizes="100vw"
+                alt={DEFAULT_EVENTS_HERO.alt}
+                width={1400}
+                height={600}
+                className="aspect-[21/9] w-full object-cover object-[22%_32%]"
+                fetchPriority="high"
+                decoding="async"
+              />
+            )}
           </div>
 
           {canManage ? (

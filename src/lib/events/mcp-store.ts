@@ -1,6 +1,6 @@
 /**
  * Plain async DB helpers for Hope Events MCP.
- * Mirrors SQL from hope-event-image src/lib/events/server.ts (incl. image_url).
+ * Mirrors SQL from hope-event-image src/lib/events/server.ts (incl. image_url + banner_url).
  * Does NOT use createServerFn / session auth — caller supplies actorUserId.
  * Leaves desk server.ts untouched (minimal churn tip pack).
  */
@@ -20,6 +20,7 @@ type EventRow = {
   cta_label: string;
   cta_url: string | null;
   image_url: string | null;
+  banner_url: string | null;
   starts_at: string | Date;
   ends_at: string | Date | null;
   status: EventStatus;
@@ -42,6 +43,7 @@ function mapRow(row: EventRow): CalendarEvent {
     ctaLabel: row.cta_label,
     ctaUrl: row.cta_url,
     imageUrl: row.image_url ?? null,
+    bannerUrl: row.banner_url ?? null,
     startsAt: toIso(row.starts_at) as string,
     endsAt: toIso(row.ends_at),
     status: row.status,
@@ -49,7 +51,7 @@ function mapRow(row: EventRow): CalendarEvent {
 }
 
 const EVENT_SELECT = `id, slug, title, description, location, cta_label, cta_url,
-             image_url, starts_at, ends_at, status`;
+             image_url, banner_url, starts_at, ends_at, status`;
 
 function clampLimit(limit?: number): number {
   if (limit == null || !Number.isFinite(limit)) return DEFAULT_LIMIT;
@@ -254,6 +256,8 @@ export const mcpCreateInputSchema = z
       .optional(),
     imageUrl: z.string().trim().max(500).nullable().optional(),
     image_url: z.string().trim().max(500).nullable().optional(),
+    bannerUrl: z.string().trim().max(500).nullable().optional(),
+    banner_url: z.string().trim().max(500).nullable().optional(),
   })
   .refine((v) => Boolean(v.startsAt || v.starts_at), {
     message: "startsAt (or starts_at) is required",
@@ -275,6 +279,10 @@ export async function mcpCreateEvent(
     data.imageUrl !== undefined ? data.imageUrl : data.image_url;
   const imageUrl =
     imageRaw === undefined ? null : assertSafeImageUrl(imageRaw);
+  const bannerRaw =
+    data.bannerUrl !== undefined ? data.bannerUrl : data.banner_url;
+  const bannerUrl =
+    bannerRaw === undefined ? null : assertSafeImageUrl(bannerRaw);
 
   const ctaLabel = data.cta_label ?? data.ctaLabel ?? "Learn More";
   const ctaUrl =
@@ -286,11 +294,11 @@ export async function mcpCreateEvent(
 
   const rows = await sql.query<EventRow>(
     `insert into events (
-       id, slug, title, description, location, cta_label, cta_url, image_url,
+       id, slug, title, description, location, cta_label, cta_url, image_url, banner_url,
        starts_at, ends_at, status, created_by, updated_by
      ) values (
-       $1, $2, $3, $4, $5, $6, $7, $8,
-       $9::timestamptz, $10::timestamptz, $11, $12, $12
+       $1, $2, $3, $4, $5, $6, $7, $8, $9,
+       $10::timestamptz, $11::timestamptz, $12, $13, $13
      )
      returning ${EVENT_SELECT}`,
     [
@@ -302,6 +310,7 @@ export async function mcpCreateEvent(
       ctaLabel,
       ctaUrl,
       imageUrl,
+      bannerUrl,
       startsAt,
       endsAt,
       data.status ?? "published",
@@ -333,9 +342,12 @@ export const mcpUpdateInputSchema = z.object({
     .max(100)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
     .optional(),
-  /** Set path, or null to clear. Omit to leave unchanged. */
+  /** Flyer path, or null to clear. Omit to leave unchanged. */
   imageUrl: z.string().trim().max(500).nullable().optional(),
   image_url: z.string().trim().max(500).nullable().optional(),
+  /** Banner path, or null to clear. Omit to leave unchanged. */
+  bannerUrl: z.string().trim().max(500).nullable().optional(),
+  banner_url: z.string().trim().max(500).nullable().optional(),
 });
 
 export async function mcpUpdateEvent(
@@ -379,15 +391,25 @@ export async function mcpUpdateEvent(
   }
 
   let nextImageUrl = cur.image_url;
-  let previousToDelete: string | null = null;
+  let nextBannerUrl = cur.banner_url;
+  const previousToDelete: string[] = [];
   const imageRaw =
     data.imageUrl !== undefined ? data.imageUrl : data.image_url;
   if (imageRaw !== undefined) {
     const asserted = assertSafeImageUrl(imageRaw);
-    if (asserted !== cur.image_url) {
-      previousToDelete = cur.image_url;
+    if (asserted !== cur.image_url && cur.image_url) {
+      previousToDelete.push(cur.image_url);
     }
     nextImageUrl = asserted;
+  }
+  const bannerRaw =
+    data.bannerUrl !== undefined ? data.bannerUrl : data.banner_url;
+  if (bannerRaw !== undefined) {
+    const asserted = assertSafeImageUrl(bannerRaw);
+    if (asserted !== cur.banner_url && cur.banner_url) {
+      previousToDelete.push(cur.banner_url);
+    }
+    nextBannerUrl = asserted;
   }
 
   const slug =
@@ -406,10 +428,11 @@ export async function mcpUpdateEvent(
        cta_label = $6,
        cta_url = $7,
        image_url = $8,
-       starts_at = $9::timestamptz,
-       ends_at = $10::timestamptz,
-       status = $11,
-       updated_by = $12,
+       banner_url = $9,
+       starts_at = $10::timestamptz,
+       ends_at = $11::timestamptz,
+       status = $12,
+       updated_by = $13,
        updated_at = now()
      where id = $1
      returning ${EVENT_SELECT}`,
@@ -422,6 +445,7 @@ export async function mcpUpdateEvent(
       ctaLabel,
       ctaUrl,
       nextImageUrl,
+      nextBannerUrl,
       startsAt,
       endsAt,
       status,
@@ -429,9 +453,12 @@ export async function mcpUpdateEvent(
     ],
   );
 
-  if (previousToDelete) {
+  if (previousToDelete.length) {
     const { deleteEventImageFile } = await import("./upload.server");
-    await deleteEventImageFile(previousToDelete).catch(() => undefined);
+    for (const path of previousToDelete) {
+      if (path === nextImageUrl || path === nextBannerUrl) continue;
+      await deleteEventImageFile(path).catch(() => undefined);
+    }
   }
 
   return mapRow(rows[0]!);
@@ -442,7 +469,7 @@ export const mcpDeleteInputSchema = z.object({
 });
 
 /**
- * Hard DELETE (matches desk deleteEvent) + image file cleanup.
+ * Hard DELETE (matches desk deleteEvent) + flyer/banner file cleanup.
  * Not a soft/status cancel — use update_event status=cancelled for that.
  */
 export async function mcpDeleteEvent(raw: {
@@ -450,12 +477,17 @@ export async function mcpDeleteEvent(raw: {
 }): Promise<{ ok: true; deletedId: string }> {
   const data = mcpDeleteInputSchema.parse(raw);
   const sql = await getSql();
-  const rows = await sql.query<{ id: string; image_url: string | null }>(
-    `delete from events where id = $1 returning id, image_url`,
+  const rows = await sql.query<{
+    id: string;
+    image_url: string | null;
+    banner_url: string | null;
+  }>(
+    `delete from events where id = $1 returning id, image_url, banner_url`,
     [data.id],
   );
   if (rows.length === 0) throw new Error("Event not found");
   const { deleteEventImageFile } = await import("./upload.server");
   await deleteEventImageFile(rows[0]!.image_url).catch(() => undefined);
+  await deleteEventImageFile(rows[0]!.banner_url).catch(() => undefined);
   return { ok: true, deletedId: rows[0]!.id };
 }

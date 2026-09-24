@@ -9,8 +9,13 @@ export type CalendarEvent = {
   location: string;
   ctaLabel: string;
   ctaUrl: string | null;
-  /** Public path e.g. `/uploads/events/….webp`, or null when unset. */
+  /** Flyer/card public path e.g. `/uploads/events/….webp`, or null when unset. */
   imageUrl: string | null;
+  /**
+   * Wide banner/hero public path e.g. `/uploads/events/….webp`, or null when unset.
+   * Separate from flyer `imageUrl`. Used by /events hero + homepage Events tile.
+   */
+  bannerUrl: string | null;
   startsAt: string;
   endsAt: string | null;
   status: EventStatus;
@@ -39,3 +44,14 @@ export type ListEventsInput = {
   /** Include draft/cancelled (staff only). Default false. */
   includeAllStatuses?: boolean;
 };
+
+/**
+ * Hero/tile image fallback: bannerUrl → imageUrl (flyer) → undefined.
+ * Caller keeps the current static/default asset when undefined. Do not invent assets.
+ */
+export function resolveEventHeroUrl(
+  event: Pick<CalendarEvent, "bannerUrl" | "imageUrl"> | null | undefined,
+): string | undefined {
+  if (!event) return undefined;
+  return event.bannerUrl || event.imageUrl || undefined;
+}

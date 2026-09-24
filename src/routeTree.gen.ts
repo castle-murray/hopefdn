@@ -22,6 +22,7 @@ import { Route as HopeCommunityHavenRouteImport } from './routes/hope-community-
 import { Route as ImpactRouteImport } from './routes/impact'
 import { Route as LegacyRouteImport } from './routes/legacy'
 import { Route as MediaRouteImport } from './routes/media'
+import { Route as NeedHelpNowRouteImport } from './routes/need-help-now'
 import { Route as PartnersRouteImport } from './routes/partners'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResourceCenterRouteImport } from './routes/resource-center'
@@ -30,6 +31,7 @@ import { Route as AdminShopRouteImport } from './routes/admin_.shop'
 import { Route as AdminUsersRouteImport } from './routes/admin_.users'
 import { Route as EventsManageRouteImport } from './routes/events_.manage'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as UploadsEventsNameRouteImport } from './routes/uploads/events.$name'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -96,6 +98,11 @@ const MediaRoute = MediaRouteImport.update({
   path: '/media',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NeedHelpNowRoute = NeedHelpNowRouteImport.update({
+  id: '/need-help-now',
+  path: '/need-help-now',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PartnersRoute = PartnersRouteImport.update({
   id: '/partners',
   path: '/partners',
@@ -136,6 +143,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UploadsEventsNameRoute = UploadsEventsNameRouteImport.update({
+  id: '/uploads/events/$name',
+  path: '/uploads/events/$name',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -151,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
   '/media': typeof MediaRoute
+  '/need-help-now': typeof NeedHelpNowRoute
   '/partners': typeof PartnersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
@@ -159,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/events/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/uploads/events/$name': typeof UploadsEventsNameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -174,6 +188,7 @@ export interface FileRoutesByTo {
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
   '/media': typeof MediaRoute
+  '/need-help-now': typeof NeedHelpNowRoute
   '/partners': typeof PartnersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
@@ -182,6 +197,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/events/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/uploads/events/$name': typeof UploadsEventsNameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -198,6 +214,7 @@ export interface FileRoutesById {
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
   '/media': typeof MediaRoute
+  '/need-help-now': typeof NeedHelpNowRoute
   '/partners': typeof PartnersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
@@ -206,6 +223,7 @@ export interface FileRoutesById {
   '/admin_/users': typeof AdminUsersRoute
   '/events_/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/uploads/events/$name': typeof UploadsEventsNameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -223,6 +241,7 @@ export interface FileRouteTypes {
     | '/impact'
     | '/legacy'
     | '/media'
+    | '/need-help-now'
     | '/partners'
     | '/reset-password'
     | '/resource-center'
@@ -231,6 +250,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/events/manage'
     | '/api/auth/$'
+    | '/uploads/events/$name'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -246,6 +266,7 @@ export interface FileRouteTypes {
     | '/impact'
     | '/legacy'
     | '/media'
+    | '/need-help-now'
     | '/partners'
     | '/reset-password'
     | '/resource-center'
@@ -254,6 +275,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/events/manage'
     | '/api/auth/$'
+    | '/uploads/events/$name'
   id:
     | '__root__'
     | '/'
@@ -269,6 +291,7 @@ export interface FileRouteTypes {
     | '/impact'
     | '/legacy'
     | '/media'
+    | '/need-help-now'
     | '/partners'
     | '/reset-password'
     | '/resource-center'
@@ -277,6 +300,7 @@ export interface FileRouteTypes {
     | '/admin_/users'
     | '/events_/manage'
     | '/api/auth/$'
+    | '/uploads/events/$name'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -293,6 +317,7 @@ export interface RootRouteChildren {
   ImpactRoute: typeof ImpactRoute
   LegacyRoute: typeof LegacyRoute
   MediaRoute: typeof MediaRoute
+  NeedHelpNowRoute: typeof NeedHelpNowRoute
   PartnersRoute: typeof PartnersRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ResourceCenterRoute: typeof ResourceCenterRoute
@@ -301,6 +326,7 @@ export interface RootRouteChildren {
   AdminUsersRoute: typeof AdminUsersRoute
   EventsManageRoute: typeof EventsManageRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  UploadsEventsNameRoute: typeof UploadsEventsNameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -396,6 +422,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MediaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/need-help-now': {
+      id: '/need-help-now'
+      path: '/need-help-now'
+      fullPath: '/need-help-now'
+      preLoaderRoute: typeof NeedHelpNowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/partners': {
       id: '/partners'
       path: '/partners'
@@ -452,6 +485,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/uploads/events/$name': {
+      id: '/uploads/events/$name'
+      path: '/uploads/events/$name'
+      fullPath: '/uploads/events/$name'
+      preLoaderRoute: typeof UploadsEventsNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -469,6 +509,7 @@ const rootRouteChildren: RootRouteChildren = {
   ImpactRoute: ImpactRoute,
   LegacyRoute: LegacyRoute,
   MediaRoute: MediaRoute,
+  NeedHelpNowRoute: NeedHelpNowRoute,
   PartnersRoute: PartnersRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ResourceCenterRoute: ResourceCenterRoute,
@@ -477,6 +518,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminUsersRoute: AdminUsersRoute,
   EventsManageRoute: EventsManageRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  UploadsEventsNameRoute: UploadsEventsNameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

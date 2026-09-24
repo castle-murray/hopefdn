@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Calendar, Newspaper } from "lucide-react";
+import { EventFlyerThumb } from "@/components/event-flyer-lightbox";
 import { PageHero } from "@/components/page-hero";
 import { Button } from "@/components/ui/button";
 import { site } from "@/data/site";
@@ -85,12 +86,10 @@ function MediaPage() {
                 className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm"
               >
                 {e.imageUrl ? (
-                  <img
+                  <EventFlyerThumb
                     src={e.imageUrl}
-                    alt=""
-                    className="aspect-[16/9] w-full object-cover"
-                    loading="lazy"
-                    decoding="async"
+                    title={e.title}
+                    imgClassName="aspect-[16/9] w-full object-cover transition duration-200 group-hover:brightness-95"
                   />
                 ) : null}
                 <div className="p-5">

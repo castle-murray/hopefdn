@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Calendar, Clock, MapPin, Settings2 } from "lucide-react";
+import { EventFlyerThumb } from "@/components/event-flyer-lightbox";
 import { PageHero } from "@/components/page-hero";
 import { Button } from "@/components/ui/button";
 import { site } from "@/data/site";
@@ -87,12 +88,9 @@ function EventsPage() {
                 >
                   {event.imageUrl ? (
                     <div className="md:col-span-3">
-                      <img
+                      <EventFlyerThumb
                         src={event.imageUrl}
-                        alt=""
-                        className="aspect-[21/9] w-full object-cover sm:aspect-[3/1]"
-                        loading="lazy"
-                        decoding="async"
+                        title={event.title}
                       />
                     </div>
                   ) : null}

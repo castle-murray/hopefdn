@@ -15,6 +15,8 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const ZOOM_STEP = 0.25;
 const WHEEL_FACTOR = 0.0015;
+/** Ignore backdrop-close / click-zoom if pointer moved more than this (px). */
+const MOVE_CLOSE_THRESHOLD = 8;
 
 type EventFlyerThumbProps = {
   src: string;
@@ -86,12 +88,26 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
 
-  // Pointer / pinch bookkeeping
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinchStart = useRef<{ dist: number; scale: number } | null>(null);
   const dragStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(
     null,
   );
+  /**
+   * Tracks the active pointer gesture for backdrop-close gating.
+   * After pan-when-zoomed, the flyer translates under the cursor so the
+   * synthetic click often lands on the dark stage — that must not close.
+   */
+  const gesture = useRef<{
+    startX: number;
+    startY: number;
+    moved: boolean;
+    /** True only when pointerdown landed on the dark stage (not the flyer). */
+    onBackdrop: boolean;
+  } | null>(null);
+  /** Sticky: last gesture was a drag/pinch — suppress the following click. */
+  const suppressClickRef = useRef(false);
+
   const scaleRef = useRef(scale);
   const txRef = useRef(tx);
   const tyRef = useRef(ty);
@@ -129,7 +145,6 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
     [resetPanIfNeeded],
   );
 
-  // Body scroll lock + focus close on open
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -139,7 +154,6 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
     };
   }, []);
 
-  // Escape to close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -151,7 +165,6 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Non-passive wheel so preventDefault works (desktop zoom)
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
@@ -172,10 +185,30 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
     return () => el.removeEventListener("wheel", onWheelNative);
   }, []);
 
-  const onPointerDown = (e: ReactPointerEvent) => {
-    // Don't start drag from chrome buttons
+  const markMovedIfNeeded = (clientX: number, clientY: number) => {
+    const g = gesture.current;
+    if (!g || g.moved) return;
+    if (Math.hypot(clientX - g.startX, clientY - g.startY) > MOVE_CLOSE_THRESHOLD) {
+      g.moved = true;
+      suppressClickRef.current = true;
+    }
+  };
+
+  const beginPointer = (
+    e: ReactPointerEvent,
+    opts: { onBackdrop: boolean; captureEl: HTMLElement },
+  ) => {
     if ((e.target as HTMLElement).closest("[data-lightbox-chrome]")) return;
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+
+    suppressClickRef.current = false;
+    gesture.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      moved: false,
+      onBackdrop: opts.onBackdrop,
+    };
+
+    opts.captureEl.setPointerCapture?.(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     if (pointers.current.size === 2) {
@@ -183,6 +216,8 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       pinchStart.current = { dist, scale: scaleRef.current };
       dragStart.current = null;
+      suppressClickRef.current = true;
+      if (gesture.current) gesture.current.moved = true;
     } else if (pointers.current.size === 1 && scaleRef.current > MIN_SCALE) {
       dragStart.current = {
         x: e.clientX,
@@ -196,6 +231,7 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
   const onPointerMove = (e: ReactPointerEvent) => {
     if (!pointers.current.has(e.pointerId)) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    markMovedIfNeeded(e.clientX, e.clientY);
 
     if (pointers.current.size === 2 && pinchStart.current) {
       const pts = [...pointers.current.values()];
@@ -232,13 +268,52 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
     }
   };
 
+  /**
+   * Close only on a real backdrop tap: down+up on the dark stage with
+   * movement under MOVE_CLOSE_THRESHOLD. Never close after a pan drag
+   * or a gesture that started on the flyer image.
+   */
   const onBackdropClick = (e: ReactMouseEvent) => {
-    if (e.target === e.currentTarget) onClose();
+    if (e.target !== e.currentTarget) return;
+
+    const g = gesture.current;
+    const suppress =
+      suppressClickRef.current ||
+      Boolean(g?.moved) ||
+      Boolean(g && !g.onBackdrop);
+
+    gesture.current = null;
+    suppressClickRef.current = false;
+
+    if (suppress) return;
+    onClose();
+  };
+
+  const onStagePointerDown = (e: ReactPointerEvent) => {
+    // Image handlers stopPropagation — this only runs for dark-stage hits.
+    if (e.target !== e.currentTarget) return;
+    beginPointer(e, { onBackdrop: true, captureEl: e.currentTarget });
+  };
+
+  const onImagePointerDown = (e: ReactPointerEvent) => {
+    e.stopPropagation();
+    const stage = stageRef.current;
+    if (!stage) return;
+    beginPointer(e, { onBackdrop: false, captureEl: stage });
+  };
+
+  const onImagePointerMove = (e: ReactPointerEvent) => {
+    e.stopPropagation();
+    onPointerMove(e);
+  };
+
+  const onImagePointerUp = (e: ReactPointerEvent) => {
+    e.stopPropagation();
+    endPointer(e);
   };
 
   const onDialogKeyDown = (e: ReactKeyboardEvent) => {
     if (e.key === "Tab") {
-      // Keep focus inside chrome: close / zoom out / zoom in
       const root = e.currentTarget;
       const focusables = root.querySelectorAll<HTMLElement>(
         "button:not([disabled])",
@@ -273,7 +348,6 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
         Event flyer: {title}
       </p>
 
-      {/* Top chrome */}
       <div
         data-lightbox-chrome
         className="relative z-20 flex shrink-0 items-center justify-between gap-3 border-b border-gold/20 bg-navy/90 px-3 py-3 sm:px-5"
@@ -315,17 +389,17 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
         </div>
       </div>
 
-      {/* Stage: backdrop tap closes; image pans/zooms */}
       <div
         ref={stageRef}
         className="relative z-10 flex min-h-0 flex-1 touch-none items-center justify-center overflow-hidden"
         onClick={onBackdropClick}
-        onPointerDown={onPointerDown}
+        onPointerDown={onStagePointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endPointer}
         onPointerCancel={endPointer}
       >
         <img
+          data-lightbox-image
           src={src}
           alt={`Flyer for ${title}`}
           draggable={false}
@@ -337,9 +411,18 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
             transformOrigin: "center center",
             willChange: "transform",
           }}
+          onPointerDown={onImagePointerDown}
+          onPointerMove={onImagePointerMove}
+          onPointerUp={onImagePointerUp}
+          onPointerCancel={onImagePointerUp}
           onClick={(e) => {
-            // Click image alone should not close; stop bubble to backdrop
             e.stopPropagation();
+            if (suppressClickRef.current || gesture.current?.moved) {
+              suppressClickRef.current = false;
+              gesture.current = null;
+              return;
+            }
+            gesture.current = null;
             if (scale <= MIN_SCALE) zoomBy(ZOOM_STEP);
           }}
           onDoubleClick={(e) => {

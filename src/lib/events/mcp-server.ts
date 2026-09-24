@@ -14,6 +14,7 @@ import {
   mcpListEvents,
   mcpUpdateEvent,
 } from "./mcp-store";
+import { saveEventImage } from "./upload.server";
 
 function textResult(data: unknown) {
   return {
@@ -37,11 +38,30 @@ function errorResult(err: unknown) {
 const iso = z.string().datetime({ offset: true });
 const statusZ = z.enum(["draft", "published", "cancelled"]);
 
+function stripDataUrlBase64(raw: string): { dataBase64: string; contentTypeHint?: string } {
+  const trimmed = raw.trim();
+  const m = /^data:([^;]+);base64,(.+)$/is.exec(trimmed);
+  if (m) {
+    return { contentTypeHint: m[1]!.trim().toLowerCase(), dataBase64: m[2]! };
+  }
+  return { dataBase64: trimmed };
+}
+
+function mimeFromFilename(name?: string): string | undefined {
+  if (!name) return undefined;
+  const ext = name.split(".").pop()?.toLowerCase();
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (ext === "gif") return "image/gif";
+  return undefined;
+}
+
 /** Build a fresh McpServer with Hope Events tools (one per HTTP request in stateless mode). */
 export function createHopeEventsMcpServer(): McpServer {
   const server = new McpServer({
     name: "hope-events",
-    version: "1.0.0",
+    version: "1.1.0",
   });
 
   server.registerTool(
@@ -95,11 +115,60 @@ export function createHopeEventsMcpServer(): McpServer {
   );
 
   server.registerTool(
+    "upload_event_image",
+    {
+      title: "Upload event image",
+      description:
+        "Upload a flyer image (JPEG/PNG/WebP/GIF, max 5 MB) via base64. Reuses desk saveEventImage. Returns { imageUrl: \"/uploads/events/<uuid>.<ext>\" } to pass into create_event / update_event. Prefer mime or filename so content-type is known; data:image/...;base64,... URLs accepted.",
+      inputSchema: {
+        dataBase64: z
+          .string()
+          .min(1)
+          .describe("Raw base64 bytes, or a data:image/...;base64,... URL"),
+        mime: z
+          .string()
+          .trim()
+          .max(100)
+          .optional()
+          .describe("image/jpeg | image/png | image/webp | image/gif"),
+        filename: z
+          .string()
+          .trim()
+          .max(200)
+          .optional()
+          .describe("Optional original filename (used to guess mime)"),
+      },
+    },
+    async (args) => {
+      try {
+        const parsed = stripDataUrlBase64(args.dataBase64);
+        const contentType =
+          args.mime?.trim() ||
+          parsed.contentTypeHint ||
+          mimeFromFilename(args.filename) ||
+          "";
+        if (!contentType) {
+          throw new Error(
+            "mime is required (or pass filename with .jpg/.png/.webp/.gif, or a data:image/...;base64 URL)",
+          );
+        }
+        const result = await saveEventImage({
+          dataBase64: parsed.dataBase64,
+          contentType,
+        });
+        return textResult(result);
+      } catch (err) {
+        return errorResult(err);
+      }
+    },
+  );
+
+  server.registerTool(
     "create_event",
     {
       title: "Create event",
       description:
-        "Create a calendar event. imageUrl must already be an uploaded /uploads/events/... path (or omit). No multipart upload in MCP v1. Uses HOPE_EVENTS_MCP_ACTOR_USER_ID for created_by.",
+        "Create a calendar event. imageUrl should be a path from upload_event_image (/uploads/events/...) or omit. Uses HOPE_EVENTS_MCP_ACTOR_USER_ID for created_by.",
       inputSchema: {
         title: z.string().trim().min(1).max(200),
         description: z.string().trim().max(5000).optional(),

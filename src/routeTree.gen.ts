@@ -33,6 +33,7 @@ import { Route as AdminUsersRouteImport } from './routes/admin_.users'
 import { Route as EventsManageRouteImport } from './routes/events_.manage'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as UploadsEventsNameRouteImport } from './routes/uploads/events.$name'
+import { Route as ApiMcpEventsUploadRouteImport } from './routes/api/mcp/events/upload'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -154,6 +155,11 @@ const UploadsEventsNameRoute = UploadsEventsNameRouteImport.update({
   path: '/uploads/events/$name',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMcpEventsUploadRoute = ApiMcpEventsUploadRouteImport.update({
+  id: '/api/mcp/events/upload',
+  path: '/api/mcp/events/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/events/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/uploads/events/$name': typeof UploadsEventsNameRoute
+  '/api/mcp/events/upload': typeof ApiMcpEventsUploadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -206,6 +213,7 @@ export interface FileRoutesByTo {
   '/events/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/uploads/events/$name': typeof UploadsEventsNameRoute
+  '/api/mcp/events/upload': typeof ApiMcpEventsUploadRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/events_/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/uploads/events/$name': typeof UploadsEventsNameRoute
+  '/api/mcp/events/upload': typeof ApiMcpEventsUploadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
     | '/events/manage'
     | '/api/auth/$'
     | '/uploads/events/$name'
+    | '/api/mcp/events/upload'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -287,6 +297,7 @@ export interface FileRouteTypes {
     | '/events/manage'
     | '/api/auth/$'
     | '/uploads/events/$name'
+    | '/api/mcp/events/upload'
   id:
     | '__root__'
     | '/'
@@ -313,6 +324,7 @@ export interface FileRouteTypes {
     | '/events_/manage'
     | '/api/auth/$'
     | '/uploads/events/$name'
+    | '/api/mcp/events/upload'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -340,6 +352,7 @@ export interface RootRouteChildren {
   EventsManageRoute: typeof EventsManageRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   UploadsEventsNameRoute: typeof UploadsEventsNameRoute
+  ApiMcpEventsUploadRoute: typeof ApiMcpEventsUploadRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -512,6 +525,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadsEventsNameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/mcp/events/upload': {
+      id: '/api/mcp/events/upload'
+      path: '/api/mcp/events/upload'
+      fullPath: '/api/mcp/events/upload'
+      preLoaderRoute: typeof ApiMcpEventsUploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -540,6 +560,7 @@ const rootRouteChildren: RootRouteChildren = {
   EventsManageRoute: EventsManageRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   UploadsEventsNameRoute: UploadsEventsNameRoute,
+  ApiMcpEventsUploadRoute: ApiMcpEventsUploadRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

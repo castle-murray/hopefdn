@@ -67,22 +67,23 @@ export function requireMcpApiKey(request: Request): void {
   }
 }
 
-/** Actor UUID for created_by / updated_by. Fail closed if unset. */
+/** Actor id for created_by / updated_by. Fail closed if unset. */
 export function requireMcpActorUserId(): string {
   const id = process.env.HOPE_EVENTS_MCP_ACTOR_USER_ID?.trim() ?? "";
   if (!id) {
     throw new Error(
-      "HOPE_EVENTS_MCP_ACTOR_USER_ID is not set — Homeserver must set an existing staff/admin user UUID",
+      "HOPE_EVENTS_MCP_ACTOR_USER_ID is not set — Homeserver must set an existing staff/admin user id",
     );
   }
-  // Soft UUID shape check (do not invent IDs).
-  if (
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+  // Soft shape: UUID *or* Better Auth text user ids (sandbox `user.id` is text nanoid, not UUID).
+  const uuidOk =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       id,
-    )
-  ) {
+    );
+  const betterAuthOk = /^[A-Za-z0-9_-]{16,64}$/.test(id);
+  if (!uuidOk && !betterAuthOk) {
     throw new Error(
-      "HOPE_EVENTS_MCP_ACTOR_USER_ID must be a UUID of an existing staff/admin user",
+      "HOPE_EVENTS_MCP_ACTOR_USER_ID must be a UUID or existing staff/admin user id",
     );
   }
   return id;

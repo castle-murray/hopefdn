@@ -13,7 +13,7 @@ import { AnniversaryBadge } from "@/components/anniversary-badge";
 import { Button } from "@/components/ui/button";
 import { impactStats, quickLinks, site } from "@/data/site";
 import {
-  fetchNextUpcomingPublishedEvent,
+  getNextUpcomingPublishedEvent,
   listEvents,
 } from "@/lib/events/server";
 import { resolveEventHeroUrl } from "@/lib/events/types";
@@ -41,7 +41,7 @@ export const Route = createFileRoute("/")({
         publicEnabled: false,
         canAccess: false,
       })),
-      fetchNextUpcomingPublishedEvent(),
+      getNextUpcomingPublishedEvent(),
     ]);
     return {
       events: list.events,

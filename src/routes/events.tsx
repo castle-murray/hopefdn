@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { site } from "@/data/site";
 import {
   canManageEvents,
-  fetchNextUpcomingPublishedEvent,
+  getNextUpcomingPublishedEvent,
   listEvents,
 } from "@/lib/events/server";
 import { resolveEventHeroUrl } from "@/lib/events/types";
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/events")({
         },
       }),
       canManageEvents(),
-      fetchNextUpcomingPublishedEvent(),
+      getNextUpcomingPublishedEvent(),
     ]);
     return { list, canManage, nextUpcoming };
   },

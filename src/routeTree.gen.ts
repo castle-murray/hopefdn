@@ -21,6 +21,7 @@ import { Route as GetInvolvedRouteImport } from './routes/get-involved'
 import { Route as HopeCommunityHavenRouteImport } from './routes/hope-community-haven'
 import { Route as ImpactRouteImport } from './routes/impact'
 import { Route as LegacyRouteImport } from './routes/legacy'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MediaRouteImport } from './routes/media'
 import { Route as NeedHelpNowRouteImport } from './routes/need-help-now'
 import { Route as PartnersRouteImport } from './routes/partners'
@@ -93,6 +94,11 @@ const LegacyRoute = LegacyRouteImport.update({
   path: '/legacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MediaRoute = MediaRouteImport.update({
   id: '/media',
   path: '/media',
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/hope-community-haven': typeof HopeCommunityHavenRoute
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
+  '/mcp': typeof McpRoute
   '/media': typeof MediaRoute
   '/need-help-now': typeof NeedHelpNowRoute
   '/partners': typeof PartnersRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/hope-community-haven': typeof HopeCommunityHavenRoute
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
+  '/mcp': typeof McpRoute
   '/media': typeof MediaRoute
   '/need-help-now': typeof NeedHelpNowRoute
   '/partners': typeof PartnersRoute
@@ -213,6 +221,7 @@ export interface FileRoutesById {
   '/hope-community-haven': typeof HopeCommunityHavenRoute
   '/impact': typeof ImpactRoute
   '/legacy': typeof LegacyRoute
+  '/mcp': typeof McpRoute
   '/media': typeof MediaRoute
   '/need-help-now': typeof NeedHelpNowRoute
   '/partners': typeof PartnersRoute
@@ -240,6 +249,7 @@ export interface FileRouteTypes {
     | '/hope-community-haven'
     | '/impact'
     | '/legacy'
+    | '/mcp'
     | '/media'
     | '/need-help-now'
     | '/partners'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/hope-community-haven'
     | '/impact'
     | '/legacy'
+    | '/mcp'
     | '/media'
     | '/need-help-now'
     | '/partners'
@@ -290,6 +301,7 @@ export interface FileRouteTypes {
     | '/hope-community-haven'
     | '/impact'
     | '/legacy'
+    | '/mcp'
     | '/media'
     | '/need-help-now'
     | '/partners'
@@ -316,6 +328,7 @@ export interface RootRouteChildren {
   HopeCommunityHavenRoute: typeof HopeCommunityHavenRoute
   ImpactRoute: typeof ImpactRoute
   LegacyRoute: typeof LegacyRoute
+  McpRoute: typeof McpRoute
   MediaRoute: typeof MediaRoute
   NeedHelpNowRoute: typeof NeedHelpNowRoute
   PartnersRoute: typeof PartnersRoute
@@ -415,6 +428,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/media': {
       id: '/media'
       path: '/media'
@@ -508,6 +528,7 @@ const rootRouteChildren: RootRouteChildren = {
   HopeCommunityHavenRoute: HopeCommunityHavenRoute,
   ImpactRoute: ImpactRoute,
   LegacyRoute: LegacyRoute,
+  McpRoute: McpRoute,
   MediaRoute: MediaRoute,
   NeedHelpNowRoute: NeedHelpNowRoute,
   PartnersRoute: PartnersRoute,

@@ -3,8 +3,8 @@ export const site = {
   shortName: "H.O.P.E. Foundation",
   tagline: "Helping Others. Pursuing Excellence.",
   motto: "Together, We Build Legacy.",
-  phone: "(757) 754-0404",
-  phoneHref: "tel:+17577540404",
+  phone: "757-241-6900",
+  phoneHref: "tel:+17572416900",
   email: "regina@hopefdn.org",
   emailHref: "mailto:regina@hopefdn.org",
   address: {

@@ -17,6 +17,40 @@ const ZOOM_STEP = 0.25;
 const WHEEL_FACTOR = 0.0015;
 /** Ignore backdrop-close / click-zoom if pointer moved more than this (px). */
 const MOVE_CLOSE_THRESHOLD = 8;
+/** 1x fit uses this fraction of the (full-viewport) stage: ~95vw x ~95vh. */
+const FIT_FRACTION = 0.95;
+/**
+ * Side gutter (px) the floating chrome needs (title pill left, button cluster
+ * right). If the 95% fit leaves narrower gutters, the fit also keeps clear of
+ * the top chrome band (and an equal bottom band for the hint) instead.
+ */
+const CHROME_GUTTER_MIN = 160;
+
+type Size = { w: number; h: number };
+
+/**
+ * 1x layout size: object-contain fit of the natural image into ~95% of the
+ * stage (the stage is the whole viewport), no fixed px cap, and never above
+ * natural size (no upscaling). `chromeH` is the measured top-chrome height.
+ */
+function fitSize(natural: Size, stage: Size, chromeH: number): Size {
+  if (natural.w <= 0 || natural.h <= 0 || stage.w <= 0 || stage.h <= 0) {
+    return { w: 0, h: 0 };
+  }
+  const contain = (maxW: number, maxH: number): Size => {
+    if (maxW <= 0 || maxH <= 0) return { w: 0, h: 0 };
+    // Cap at 1: never upscale a small flyer at 1x (zoom may still go past natural).
+    const k = Math.min(1, maxW / natural.w, maxH / natural.h);
+    return { w: natural.w * k, h: natural.h * k };
+  };
+  const full = contain(stage.w * FIT_FRACTION, stage.h * FIT_FRACTION);
+  if ((stage.w - full.w) / 2 >= CHROME_GUTTER_MIN) return full;
+  // Narrow side gutters (portrait / phone): stay between the chrome bands.
+  return contain(
+    stage.w * FIT_FRACTION,
+    Math.min(stage.h * FIT_FRACTION, stage.h - 2 * chromeH),
+  );
+}
 
 type EventFlyerThumbProps = {
   src: string;
@@ -88,9 +122,30 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
+  /** Natural image size and stage size → 1x fit (layout) size. */
+  const [natural, setNatural] = useState<Size | null>(null);
+  const [stageSize, setStageSize] = useState<Size | null>(null);
+  const [chromeH, setChromeH] = useState(64);
+  const chromeRef = useRef<HTMLDivElement>(null);
+  const base =
+    natural && stageSize
+      ? fitSize(natural, stageSize, chromeH)
+      : { w: 0, h: 0 };
+  /** Side gutter at 1x; when wide enough the title pill lives in it. */
+  const gutter = stageSize ? (stageSize.w - base.w) / 2 : 0;
+  const titleInGutter = base.w > 0 && gutter >= CHROME_GUTTER_MIN;
+  const sized = base.w > 0 && base.h > 0;
 
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const pinchStart = useRef<{ dist: number; scale: number } | null>(null);
+  const pinchStart = useRef<{
+    dist: number;
+    scale: number;
+    /** Pinch center relative to stage center at pinch start. */
+    cx: number;
+    cy: number;
+    tx: number;
+    ty: number;
+  } | null>(null);
   const dragStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(
     null,
   );
@@ -108,6 +163,8 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
   } | null>(null);
   /** Sticky: last gesture was a drag/pinch — suppress the following click. */
   const suppressClickRef = useRef(false);
+  /** Scale before the first click of a (possible) double-click. */
+  const preClickScaleRef = useRef(MIN_SCALE);
 
   const scaleRef = useRef(scale);
   const txRef = useRef(tx);
@@ -115,36 +172,94 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
   scaleRef.current = scale;
   txRef.current = tx;
   tyRef.current = ty;
+  const baseRef = useRef(base);
+  baseRef.current = base;
 
   const clampScale = (n: number) =>
     Math.min(MAX_SCALE, Math.max(MIN_SCALE, n));
 
-  const resetPanIfNeeded = useCallback((nextScale: number) => {
-    if (nextScale <= MIN_SCALE) {
-      setTx(0);
-      setTy(0);
-    }
+  /** Keep the zoomed image covering the stage (no panning into the void). */
+  const clampPan = useCallback((nextScale: number, x: number, y: number) => {
+    const stage = stageRef.current;
+    const b = baseRef.current;
+    if (!stage || nextScale <= MIN_SCALE || b.w <= 0) return { x: 0, y: 0 };
+    const limX = Math.max(0, (b.w * nextScale - stage.clientWidth) / 2);
+    const limY = Math.max(0, (b.h * nextScale - stage.clientHeight) / 2);
+    return {
+      x: Math.min(limX, Math.max(-limX, x)),
+      y: Math.min(limY, Math.max(-limY, y)),
+    };
   }, []);
 
-  const zoomBy = useCallback(
-    (delta: number) => {
-      setScale((s) => {
-        const next = clampScale(s + delta);
-        resetPanIfNeeded(next);
-        return next;
-      });
+  /** Point (client coords) → offset from the stage center. */
+  const toStageCenter = useCallback((clientX: number, clientY: number) => {
+    const stage = stageRef.current;
+    if (!stage) return { x: 0, y: 0 };
+    const r = stage.getBoundingClientRect();
+    return { x: clientX - (r.left + r.width / 2), y: clientY - (r.top + r.height / 2) };
+  }, []);
+
+  /**
+   * Zoom so the image point under `focal` (offset from stage center)
+   * stays under it. Omit focal to zoom around the stage center.
+   */
+  const applyZoom = useCallback(
+    (
+      next: number,
+      focal?: { x: number; y: number },
+      from?: { scale: number; tx: number; ty: number },
+    ) => {
+      const s0 = from?.scale ?? scaleRef.current;
+      const tx0 = from?.tx ?? txRef.current;
+      const ty0 = from?.ty ?? tyRef.current;
+      const s1 = clampScale(next);
+      const f = focal ?? { x: 0, y: 0 };
+      const k = s1 / s0;
+      const pan = clampPan(s1, f.x - (f.x - tx0) * k, f.y - (f.y - ty0) * k);
+      scaleRef.current = s1;
+      txRef.current = pan.x;
+      tyRef.current = pan.y;
+      setScale(s1);
+      setTx(pan.x);
+      setTy(pan.y);
     },
-    [resetPanIfNeeded],
+    [clampPan],
+  );
+
+  const zoomBy = useCallback(
+    (delta: number) => applyZoom(scaleRef.current + delta),
+    [applyZoom],
   );
 
   const zoomTo = useCallback(
-    (next: number) => {
-      const clamped = clampScale(next);
-      setScale(clamped);
-      resetPanIfNeeded(clamped);
-    },
-    [resetPanIfNeeded],
+    (next: number, focal?: { x: number; y: number }) => applyZoom(next, focal),
+    [applyZoom],
   );
+
+  /** Track stage size (1x fit depends on it); re-clamp pan on resize. */
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const measure = () => {
+      setStageSize({ w: el.clientWidth, h: el.clientHeight });
+      if (chromeRef.current) setChromeH(chromeRef.current.offsetHeight);
+    };
+    measure();
+    const ro =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    ro?.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
+  useEffect(() => {
+    const pan = clampPan(scaleRef.current, txRef.current, tyRef.current);
+    if (pan.x !== txRef.current) setTx(pan.x);
+    if (pan.y !== tyRef.current) setTy(pan.y);
+  }, [base.w, base.h, clampPan]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -172,19 +287,14 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
     const onWheelNative = (e: WheelEvent) => {
       e.preventDefault();
       const delta = -e.deltaY * WHEEL_FACTOR * scaleRef.current;
-      const next = Math.min(
-        MAX_SCALE,
-        Math.max(MIN_SCALE, scaleRef.current + delta),
+      applyZoom(
+        scaleRef.current + delta,
+        toStageCenter(e.clientX, e.clientY),
       );
-      setScale(next);
-      if (next <= MIN_SCALE) {
-        setTx(0);
-        setTy(0);
-      }
     };
     el.addEventListener("wheel", onWheelNative, { passive: false });
     return () => el.removeEventListener("wheel", onWheelNative);
-  }, []);
+  }, [applyZoom, toStageCenter]);
 
   const markMovedIfNeeded = (clientX: number, clientY: number) => {
     const g = gesture.current;
@@ -215,7 +325,18 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
     if (pointers.current.size === 2) {
       const pts = [...pointers.current.values()];
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      pinchStart.current = { dist, scale: scaleRef.current };
+      const c = toStageCenter(
+        (pts[0].x + pts[1].x) / 2,
+        (pts[0].y + pts[1].y) / 2,
+      );
+      pinchStart.current = {
+        dist,
+        scale: scaleRef.current,
+        cx: c.x,
+        cy: c.y,
+        tx: txRef.current,
+        ty: tyRef.current,
+      };
       dragStart.current = null;
       suppressClickRef.current = true;
       if (gesture.current) gesture.current.moved = true;
@@ -237,9 +358,22 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
     if (pointers.current.size === 2 && pinchStart.current) {
       const pts = [...pointers.current.values()];
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      if (pinchStart.current.dist > 0) {
-        const ratio = dist / pinchStart.current.dist;
-        zoomTo(pinchStart.current.scale * ratio);
+      const p = pinchStart.current;
+      if (p.dist > 0) {
+        // Zoom toward the pinch center; moving the center also pans.
+        const c = toStageCenter(
+          (pts[0].x + pts[1].x) / 2,
+          (pts[0].y + pts[1].y) / 2,
+        );
+        const s1 = clampScale(p.scale * (dist / p.dist));
+        const k = s1 / p.scale;
+        const pan = clampPan(s1, c.x - (p.cx - p.tx) * k, c.y - (p.cy - p.ty) * k);
+        scaleRef.current = s1;
+        txRef.current = pan.x;
+        tyRef.current = pan.y;
+        setScale(s1);
+        setTx(pan.x);
+        setTy(pan.y);
       }
       return;
     }
@@ -247,8 +381,15 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
     if (dragStart.current && scaleRef.current > MIN_SCALE) {
       const dx = e.clientX - dragStart.current.x;
       const dy = e.clientY - dragStart.current.y;
-      setTx(dragStart.current.tx + dx);
-      setTy(dragStart.current.ty + dy);
+      const pan = clampPan(
+        scaleRef.current,
+        dragStart.current.tx + dx,
+        dragStart.current.ty + dy,
+      );
+      txRef.current = pan.x;
+      tyRef.current = pan.y;
+      setTx(pan.x);
+      setTy(pan.y);
     }
   };
 
@@ -290,17 +431,20 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
     onClose();
   };
 
-  const onStagePointerDown = (e: ReactPointerEvent) => {
+  const onStagePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     // Image handlers stopPropagation — this only runs for dark-stage hits.
     if (e.target !== e.currentTarget) return;
     beginPointer(e, { onBackdrop: true, captureEl: e.currentTarget });
   };
 
-  const onImagePointerDown = (e: ReactPointerEvent) => {
+  const onImagePointerDown = (e: ReactPointerEvent<HTMLImageElement>) => {
     e.stopPropagation();
-    const stage = stageRef.current;
-    if (!stage) return;
-    beginPointer(e, { onBackdrop: false, captureEl: stage });
+    // Capture on the image itself (not the stage): the pointer stays bound to
+    // the flyer while panning, and click/dblclick still target the image so
+    // click-zoom and double-click zoom fire (capturing on the stage retargeted
+    // them to the stage in Chromium). A drag released over the dark stage
+    // therefore never produces a backdrop click.
+    beginPointer(e, { onBackdrop: false, captureEl: e.currentTarget });
   };
 
   const onImagePointerMove = (e: ReactPointerEvent) => {
@@ -342,21 +486,30 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
       aria-modal="true"
       aria-labelledby={labelId}
       aria-label={`Event flyer: ${title}`}
-      className="fixed inset-0 z-[100] flex flex-col bg-navy/95 text-cream"
+      className="fixed inset-0 z-[100] bg-navy/95 text-cream"
       onKeyDown={onDialogKeyDown}
     >
       <p id={labelId} className="sr-only">
         Event flyer: {title}
       </p>
 
+      {/*
+        Floating chrome over the full-viewport stage (no opaque band, so the
+        ~95vh flyer isn't covered). The bar itself is click-through; only the
+        title pill and buttons take pointer events.
+      */}
       <div
+        ref={chromeRef}
         data-lightbox-chrome
-        className="relative z-20 flex shrink-0 items-center justify-between gap-3 border-b border-gold/20 bg-navy/90 px-3 py-3 sm:px-5"
+        className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-3 py-3 sm:px-5"
       >
-        <p className="min-w-0 truncate font-display text-sm font-semibold text-gold-light sm:text-base">
+        <p
+          className="pointer-events-auto min-w-0 truncate rounded-full bg-navy/85 px-3 py-1.5 font-display text-sm font-semibold text-gold-light shadow-md backdrop-blur-sm sm:text-base"
+          style={titleInGutter ? { maxWidth: `${Math.max(0, gutter - 32)}px` } : undefined}
+        >
           {title}
         </p>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="pointer-events-auto flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             data-lightbox-chrome
@@ -392,52 +545,81 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
 
       <div
         ref={stageRef}
-        className="relative z-10 flex min-h-0 flex-1 touch-none items-center justify-center overflow-hidden"
+        className="absolute inset-0 z-10 flex touch-none items-center justify-center overflow-hidden"
         onClick={onBackdropClick}
         onPointerDown={onStagePointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endPointer}
         onPointerCancel={endPointer}
       >
+        {/*
+          Sharp zoom: no CSS scaling transform or layer hint (Chromium rasterizes the
+          layer at 1x and upscales → blurry). Zoom sets the real layout
+          width/height (1x fit × scale) so the full-res src is decoded and
+          rasterized at the zoomed size; pan is translate-only.
+        */}
         <img
           data-lightbox-image
           src={src}
           alt={`Flyer for ${title}`}
           draggable={false}
-          className={`max-h-[min(92vh,900px)] max-w-[min(96vw,1100px)] select-none object-contain shadow-[var(--shadow-elevated)] ${
-            panning ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"
-          }`}
-          style={{
-            transform: `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`,
-            transformOrigin: "center center",
-            willChange: "transform",
+          decoding="async"
+          onLoad={(e) => {
+            const img = e.currentTarget;
+            if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+              setNatural({ w: img.naturalWidth, h: img.naturalHeight });
+            }
           }}
+          ref={(img) => {
+            // Cached images may finish before React attaches onLoad.
+            if (img && img.complete && img.naturalWidth > 0 && !natural) {
+              setNatural({ w: img.naturalWidth, h: img.naturalHeight });
+            }
+          }}
+          className={`shrink-0 select-none object-contain shadow-[var(--shadow-elevated)] ${
+            sized ? "max-h-none max-w-none" : "max-h-[95vh] max-w-[95vw]"
+          } ${panning ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
+          style={
+            sized
+              ? {
+                  width: `${base.w * scale}px`,
+                  height: `${base.h * scale}px`,
+                  transform: tx || ty ? `translate(${tx}px, ${ty}px)` : undefined,
+                }
+              : undefined
+          }
           onPointerDown={onImagePointerDown}
           onPointerMove={onImagePointerMove}
           onPointerUp={onImagePointerUp}
           onPointerCancel={onImagePointerUp}
           onClick={(e) => {
             e.stopPropagation();
+            // Only the first click of a double-click records the pre-zoom scale.
+            if (e.detail <= 1) preClickScaleRef.current = scale;
             if (suppressClickRef.current || gesture.current?.moved) {
               suppressClickRef.current = false;
               gesture.current = null;
               return;
             }
             gesture.current = null;
-            if (scale <= MIN_SCALE) zoomBy(ZOOM_STEP);
+            if (scale <= MIN_SCALE) {
+              zoomTo(scale + ZOOM_STEP, toStageCenter(e.clientX, e.clientY));
+            }
           }}
           onDoubleClick={(e) => {
             e.stopPropagation();
-            if (scale > MIN_SCALE) {
+            // Decide on the scale before the dblclick's first click, which
+            // already stepped 1x → 1.25x.
+            if (preClickScaleRef.current > MIN_SCALE) {
               zoomTo(MIN_SCALE);
             } else {
-              zoomTo(2);
+              zoomTo(2, toStageCenter(e.clientX, e.clientY));
             }
           }}
         />
       </div>
 
-      <p className="relative z-20 shrink-0 px-4 py-2 text-center text-[0.7rem] text-cream/60 sm:text-xs">
+      <p className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 py-2 text-center text-[0.7rem] text-cream/60 sm:text-xs">
         Scroll or use +/− to zoom · drag to pan · Esc or backdrop to close
       </p>
     </div>

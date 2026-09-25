@@ -15,7 +15,7 @@ import { PRIMARY_PUBLIC_HOST } from "@/lib/public-hosts";
 
 const APP_NAME = "H.O.P.E. Foundation, Inc.";
 const APP_DESCRIPTION =
-  "Helping Others. Pursuing Excellence. Building legacy through compassion, dignity & community across Hampton Roads.";
+  "Helping Others Pursue Excellence. Building legacy through compassion, dignity & community across Hampton Roads.";
 // Canonical host for absolute OG URLs (override with VITE_PUBLIC_HOSTNAME).
 const host =
   (import.meta.env.VITE_PUBLIC_HOSTNAME as string | undefined)?.trim() ||

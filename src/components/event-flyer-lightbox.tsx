@@ -25,6 +25,23 @@ const FIT_FRACTION = 0.95;
  * the top chrome band (and an equal bottom band for the hint) instead.
  */
 const CHROME_GUTTER_MIN = 160;
+/** Double-tap / double-click zoom cycle: 1x → 2x → 3x → back to 1x. */
+const CYCLE_LEVELS = [2, 3] as const;
+/** Max gap (ms) and finger travel (px) between two taps of a double-tap. */
+const DOUBLE_TAP_MS = 300;
+const DOUBLE_TAP_SLOP = 30;
+
+/**
+ * Next double-tap level from the zoom *before* the gesture: the next cycle
+ * level strictly above it (intermediate zooms step up: 1.25x → 2x,
+ * 2.5x → 3x); at 3x or above, back to 1x.
+ */
+function nextCycleScale(from: number): number {
+  for (const level of CYCLE_LEVELS) {
+    if (from < level - 0.01) return level;
+  }
+  return MIN_SCALE;
+}
 
 type Size = { w: number; h: number };
 
@@ -33,7 +50,12 @@ type Size = { w: number; h: number };
  * stage (the stage is the whole viewport), no fixed px cap, and never above
  * natural size (no upscaling). `chromeH` is the measured top-chrome height.
  */
-function fitSize(natural: Size, stage: Size, chromeH: number): Size {
+function fitSize(
+  natural: Size,
+  stage: Size,
+  chromeH: number,
+  hintH: number,
+): Size {
   if (natural.w <= 0 || natural.h <= 0 || stage.w <= 0 || stage.h <= 0) {
     return { w: 0, h: 0 };
   }
@@ -45,10 +67,13 @@ function fitSize(natural: Size, stage: Size, chromeH: number): Size {
   };
   const full = contain(stage.w * FIT_FRACTION, stage.h * FIT_FRACTION);
   if ((stage.w - full.w) / 2 >= CHROME_GUTTER_MIN) return full;
-  // Narrow side gutters (portrait / phone): stay between the chrome bands.
+  // Narrow side gutters (portrait / phone): stay between the chrome bands
+  // (top: title + buttons; bottom: hint). The flyer is centered, so both
+  // bands reserve the taller of the two.
+  const band = Math.max(chromeH, hintH);
   return contain(
     stage.w * FIT_FRACTION,
-    Math.min(stage.h * FIT_FRACTION, stage.h - 2 * chromeH),
+    Math.min(stage.h * FIT_FRACTION, stage.h - 2 * band),
   );
 }
 
@@ -125,11 +150,13 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
   /** Natural image size and stage size → 1x fit (layout) size. */
   const [natural, setNatural] = useState<Size | null>(null);
   const [stageSize, setStageSize] = useState<Size | null>(null);
-  const [chromeH, setChromeH] = useState(64);
+  const [chromeH, setChromeH] = useState(68);
+  const [hintH, setHintH] = useState(0);
   const chromeRef = useRef<HTMLDivElement>(null);
+  const hintRef = useRef<HTMLDivElement>(null);
   const base =
     natural && stageSize
-      ? fitSize(natural, stageSize, chromeH)
+      ? fitSize(natural, stageSize, chromeH, hintH)
       : { w: 0, h: 0 };
   /** Side gutter at 1x; when wide enough the title pill lives in it. */
   const gutter = stageSize ? (stageSize.w - base.w) / 2 : 0;
@@ -165,6 +192,15 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
   const suppressClickRef = useRef(false);
   /** Scale before the first click of a (possible) double-click. */
   const preClickScaleRef = useRef(MIN_SCALE);
+  /** Pointer type of the latest gesture (mouse double-click vs touch double-tap). */
+  const lastPointerTypeRef = useRef<string>("mouse");
+  /**
+   * First tap of a possible touch/pen double-tap: time, position and the
+   * zoom *before* that tap (its click may already step 1x → 1.25x).
+   */
+  const lastTapRef = useRef<{ t: number; x: number; y: number; scale: number } | null>(
+    null,
+  );
 
   const scaleRef = useRef(scale);
   const txRef = useRef(tx);
@@ -243,11 +279,15 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
     const measure = () => {
       setStageSize({ w: el.clientWidth, h: el.clientHeight });
       if (chromeRef.current) setChromeH(chromeRef.current.offsetHeight);
+      if (hintRef.current) setHintH(hintRef.current.offsetHeight);
     };
     measure();
     const ro =
       typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
     ro?.observe(el);
+    // Title wrap / web-font swap / hint wrap change the chrome bands.
+    if (chromeRef.current) ro?.observe(chromeRef.current);
+    if (hintRef.current) ro?.observe(hintRef.current);
     window.addEventListener("resize", measure);
     return () => {
       ro?.disconnect();
@@ -311,6 +351,7 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
   ) => {
     if ((e.target as HTMLElement).closest("[data-lightbox-chrome]")) return;
 
+    lastPointerTypeRef.current = e.pointerType || "mouse";
     suppressClickRef.current = false;
     gesture.current = {
       startX: e.clientX,
@@ -454,7 +495,38 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
 
   const onImagePointerUp = (e: ReactPointerEvent) => {
     e.stopPropagation();
+    // A clean single-finger tap on the flyer (no drag, no pinch)?
+    const g = gesture.current;
+    const isTap =
+      e.type === "pointerup" &&
+      e.pointerType !== "mouse" &&
+      Boolean(g && !g.moved && !g.onBackdrop) &&
+      pointers.current.size === 1 &&
+      pointers.current.has(e.pointerId);
     endPointer(e);
+    if (!isTap) {
+      if (e.pointerType !== "mouse") lastTapRef.current = null;
+      return;
+    }
+    const now = e.timeStamp;
+    const prev = lastTapRef.current;
+    if (
+      prev &&
+      now - prev.t <= DOUBLE_TAP_MS &&
+      Math.hypot(e.clientX - prev.x, e.clientY - prev.y) <= DOUBLE_TAP_SLOP
+    ) {
+      // Touch double-tap: cycle from the zoom before the first tap.
+      lastTapRef.current = null;
+      suppressClickRef.current = true; // swallow this tap's click (no 1.25x step)
+      zoomTo(nextCycleScale(prev.scale), toStageCenter(e.clientX, e.clientY));
+    } else {
+      lastTapRef.current = {
+        t: now,
+        x: e.clientX,
+        y: e.clientY,
+        scale: scaleRef.current,
+      };
+    }
   };
 
   const onDialogKeyDown = (e: ReactKeyboardEvent) => {
@@ -503,8 +575,10 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
         data-lightbox-chrome
         className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-3 py-3 sm:px-5"
       >
+        {/* Wraps (no ellipsis) so long titles stay fully readable on phones. */}
         <p
-          className="pointer-events-auto min-w-0 truncate rounded-full bg-navy/85 px-3 py-1.5 font-display text-sm font-semibold text-gold-light shadow-md backdrop-blur-sm sm:text-base"
+          data-lightbox-title
+          className="pointer-events-auto min-w-0 break-words rounded-2xl bg-navy/85 px-3 py-1.5 font-display text-[0.8125rem] font-semibold leading-snug text-gold-light shadow-md backdrop-blur-sm sm:text-base"
           style={titleInGutter ? { maxWidth: `${Math.max(0, gutter - 32)}px` } : undefined}
         >
           {title}
@@ -515,7 +589,7 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
             data-lightbox-chrome
             onClick={() => zoomBy(-ZOOM_STEP)}
             disabled={!canZoomOut}
-            className="inline-flex size-10 items-center justify-center rounded-full border border-gold/40 bg-navy text-gold-light transition hover:bg-gold/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex size-11 items-center justify-center rounded-full border border-gold/40 bg-navy text-gold-light transition hover:bg-gold/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="Zoom out"
           >
             <ZoomOut className="size-5" aria-hidden />
@@ -525,7 +599,7 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
             data-lightbox-chrome
             onClick={() => zoomBy(ZOOM_STEP)}
             disabled={!canZoomIn}
-            className="inline-flex size-10 items-center justify-center rounded-full border border-gold/40 bg-navy text-gold-light transition hover:bg-gold/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex size-11 items-center justify-center rounded-full border border-gold/40 bg-navy text-gold-light transition hover:bg-gold/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="Zoom in"
           >
             <ZoomIn className="size-5" aria-hidden />
@@ -535,7 +609,7 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
             type="button"
             data-lightbox-chrome
             onClick={onClose}
-            className="inline-flex size-10 items-center justify-center rounded-full border border-gold/40 bg-navy text-gold-light transition hover:bg-gold/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+            className="inline-flex size-11 items-center justify-center rounded-full border border-gold/40 bg-navy text-gold-light transition hover:bg-gold/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
             aria-label="Close flyer"
           >
             <X className="size-5" aria-hidden />
@@ -608,20 +682,44 @@ function EventFlyerLightbox({ src, title, onClose }: LightboxProps) {
           }}
           onDoubleClick={(e) => {
             e.stopPropagation();
-            // Decide on the scale before the dblclick's first click, which
-            // already stepped 1x → 1.25x.
-            if (preClickScaleRef.current > MIN_SCALE) {
-              zoomTo(MIN_SCALE);
-            } else {
-              zoomTo(2, toStageCenter(e.clientX, e.clientY));
-            }
+            // Touch/pen double-taps are handled in onImagePointerUp (some
+            // mobile browsers also emit dblclick; don't cycle twice).
+            if (lastPointerTypeRef.current !== "mouse") return;
+            // Mouse: cycle from the scale before the dblclick's first click
+            // (which may already have stepped 1x → 1.25x).
+            zoomTo(
+              nextCycleScale(preClickScaleRef.current),
+              toStageCenter(e.clientX, e.clientY),
+            );
           }}
         />
       </div>
 
-      <p className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 py-2 text-center text-[0.7rem] text-cream/60 sm:text-xs">
-        Scroll or use +/− to zoom · drag to pan · Esc or backdrop to close
-      </p>
+      {/*
+        Hint on a dark pill so it stays legible over a zoomed flyer. Wording
+        follows the input type via CSS (pointer: coarse), so it is SSR-safe
+        (no window checks). Wide screens: bottom-left gutter, clear of the
+        1x flyer; narrow screens: centered bottom band (reserved by fitSize).
+      */}
+      <div
+        ref={hintRef}
+        className={`pointer-events-none absolute bottom-0 z-20 flex px-3 pb-3 sm:px-5 ${
+          titleInGutter ? "left-0 justify-start" : "inset-x-0 justify-center"
+        }`}
+        style={titleInGutter ? { maxWidth: `${Math.max(0, gutter)}px` } : undefined}
+      >
+        <p
+          data-lightbox-hint
+          className="rounded-2xl bg-navy/85 px-3 py-1.5 text-center text-[0.7rem] leading-snug text-cream/90 shadow-md backdrop-blur-sm sm:text-xs"
+        >
+          <span className="pointer-coarse:hidden">
+            Scroll or use +/− to zoom · drag to pan · Esc or backdrop to close
+          </span>
+          <span className="hidden pointer-coarse:inline">
+            Pinch or double-tap to zoom · drag to pan · tap outside or ✕ to close
+          </span>
+        </p>
+      </div>
     </div>
   );
 

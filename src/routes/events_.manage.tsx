@@ -378,7 +378,7 @@ function ManageEventsPage() {
                     <img
                       src={shownImage}
                       alt=""
-                      className="h-40 w-full max-w-md rounded-lg border border-border object-cover"
+                      className="h-40 w-full max-w-md rounded-lg border border-border object-cover object-top"
                     />
                   ) : (
                     <p className="text-xs text-muted">
@@ -560,7 +560,7 @@ function ManageEventsPage() {
                     <img
                       src={event.imageUrl}
                       alt=""
-                      className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                      className="h-16 w-16 shrink-0 rounded-lg object-cover object-top"
                     />
                   ) : null}
                   <div className="min-w-0">

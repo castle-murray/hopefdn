@@ -50,6 +50,9 @@ function EventsPage() {
   const { list, canManage, nextUpcoming } = Route.useLoaderData();
   const { events } = list;
   const heroUrl = resolveEventHeroUrl(nextUpcoming);
+  // Flyer fallback (no bannerUrl): anchor crop to top so the flyer header shows.
+  // Real banners keep object-center.
+  const heroIsFlyer = Boolean(heroUrl) && !nextUpcoming?.bannerUrl;
 
   return (
     <>
@@ -72,7 +75,7 @@ function EventsPage() {
                 }
                 width={1400}
                 height={600}
-                className="aspect-[21/9] w-full object-cover object-center"
+                className={`aspect-[21/9] w-full object-cover ${heroIsFlyer ? "object-top" : "object-center"}`}
                 fetchPriority="high"
                 decoding="async"
               />

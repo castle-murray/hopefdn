@@ -79,6 +79,8 @@ const quickLinkCardClass =
 function HomePage() {
   const { events, shopPublic, nextUpcoming } = Route.useLoaderData();
   const eventsTileUrl = resolveEventHeroUrl(nextUpcoming);
+  // Tile fell back to the flyer (no bannerUrl): anchor crop to top.
+  const eventsTileIsFlyer = Boolean(eventsTileUrl) && !nextUpcoming?.bannerUrl;
   return (
     <>
       {/* Hero — cream wash + dark type (stronger scrim on mobile for legibility) */}
@@ -174,6 +176,8 @@ function HomePage() {
                   ? eventsTileUrl
                   : item.image;
               const tileIsUpload = tileImage.startsWith("/uploads/");
+              const tileIsFlyer =
+                item.href === "/events" && tileImage === eventsTileUrl && eventsTileIsFlyer;
 
               const media = (
                 <>
@@ -199,7 +203,7 @@ function HomePage() {
                     }
                     style={
                       tileIsUpload
-                        ? { objectPosition: "center" }
+                        ? { objectPosition: tileIsFlyer ? "center top" : "center" }
                         : "imagePosition" in item && item.imagePosition
                           ? { objectPosition: item.imagePosition }
                           : undefined

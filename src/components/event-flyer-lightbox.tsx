@@ -28,6 +28,7 @@ type EventFlyerThumbProps = {
 /**
  * Clickable event flyer preview. Opens a full-screen zoomable lightbox.
  * Use only when the event has an imageUrl (e.g. /uploads/events/...).
+ * Crops anchor to top (object-top) so the flyer header stays visible (HOPE-12).
  */
 export function EventFlyerThumb({
   src,
@@ -53,7 +54,7 @@ export function EventFlyerThumb({
           alt=""
           className={
             imgClassName ??
-            "aspect-[21/9] w-full object-cover transition duration-200 group-hover:brightness-95 sm:aspect-[3/1]"
+            "aspect-[21/9] w-full object-cover object-top transition duration-200 group-hover:brightness-95 sm:aspect-[3/1]"
           }
           loading="lazy"
           decoding="async"

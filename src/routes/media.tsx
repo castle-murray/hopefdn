@@ -89,7 +89,7 @@ function MediaPage() {
                   <EventFlyerThumb
                     src={e.imageUrl}
                     title={e.title}
-                    imgClassName="aspect-[16/9] w-full object-cover transition duration-200 group-hover:brightness-95"
+                    imgClassName="aspect-[16/9] w-full object-cover object-top transition duration-200 group-hover:brightness-95"
                   />
                 ) : null}
                 <div className="p-5">

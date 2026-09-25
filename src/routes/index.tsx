@@ -70,9 +70,6 @@ const iconMap = {
   users: Users,
 } as const;
 
-/** HOPE-13: what the acronym stands for (exact board wording). */
-const HOPE_ACRONYM = "Helping Others Pursue Excellence";
-
 const heroBtn =
   "h-8 shrink-0 gap-1 rounded-full px-2.5 text-[0.62rem] font-semibold uppercase tracking-[0.04em] sm:h-9 sm:px-3 sm:text-[0.65rem] [&_svg]:size-3";
 
@@ -103,23 +100,6 @@ function HomePage() {
 
         <div className="relative mx-auto flex min-h-[min(78vh,640px)] max-w-7xl flex-col justify-center px-4 py-14 sm:min-h-[min(72vh,640px)] sm:px-6 sm:py-12 lg:px-8 lg:py-16">
           <div className="max-w-2xl">
-            {/* HOPE-13: acronym kicker; initials in the headline's gold accent */}
-            <p className="mb-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 font-display text-[1.25rem] leading-snug text-navy sm:mb-3 sm:text-[1.5rem] lg:text-[1.75rem]">
-              <span className="sr-only">{`H.O.P.E. stands for ${HOPE_ACRONYM}`}</span>
-              <span aria-hidden className="font-bold tracking-[0.06em] text-gold-dark">
-                H.O.P.E.
-              </span>
-              <span aria-hidden className="h-px w-5 shrink-0 bg-gold sm:w-7" />
-              <span aria-hidden className="italic">
-                {HOPE_ACRONYM.split(" ").map((word, i) => (
-                  <span key={word}>
-                    {i > 0 ? " " : null}
-                    <span className="font-bold text-gold-dark">{word[0]}</span>
-                    {word.slice(1)}
-                  </span>
-                ))}
-              </span>
-            </p>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-gold-dark sm:mb-4 sm:text-sm">
               Building Legacy Through
             </p>

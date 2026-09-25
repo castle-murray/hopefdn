@@ -69,7 +69,7 @@ export function Footer() {
       <div className="bg-navy-deep text-cream">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
           <div className="space-y-4">
-            <Logo variant="light" showTagline />
+            <Logo variant="light" showTagline={false} />
             <p className="text-sm leading-relaxed text-cream/70">
               A 501(c)(3) nonprofit dedicated to providing shelter, meals, and
               essential services to the disadvantaged and homeless population of{" "}

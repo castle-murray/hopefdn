@@ -57,7 +57,6 @@ function MediaPage() {
               <h3 className="font-display text-xl text-gold-light">Press kit</h3>
               <ul className="mt-4 space-y-3 text-sm text-cream/80">
                 <li>Organization: {site.name}</li>
-                <li>Tagline: {site.tagline}</li>
                 <li>Motto: {site.motto}</li>
                 <li>Region: {site.region}, Virginia</li>
                 <li>

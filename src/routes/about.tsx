@@ -30,10 +30,7 @@ function AboutPage() {
       <section className="py-16 sm:py-20">
         <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
           <div>
-            <h2 className="font-display text-3xl font-semibold text-navy sm:text-4xl">
-              Helping Others. Pursuing Excellence.
-            </h2>
-            <p className="mt-5 text-base leading-relaxed text-muted">
+            <p className="text-base leading-relaxed text-muted">
               {aboutSummary}
             </p>
             <p className="mt-4 text-base leading-relaxed text-muted">

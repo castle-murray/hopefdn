@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { site } from "@/data/site";
 import { cn } from "@/lib/utils";
 
 /** Icon-only mark (transparent PNG provided by the foundation). */
@@ -78,13 +79,15 @@ export function Logo({
           Foundation Inc.
         </span>
         {showTagline && !compact ? (
+          // HOPE-4: the only place the tagline appears sitewide; shown on phones too.
           <span
+            data-logo-tagline
             className={cn(
-              "mt-1 hidden text-[0.62rem] font-medium tracking-wide sm:block",
+              "mt-1 block text-balance text-[0.72rem] font-medium leading-tight tracking-wide",
               isLight ? "text-cream/70" : "text-muted",
             )}
           >
-            Helping Others. Pursuing Excellence.
+            {site.tagline}
           </span>
         ) : null}
       </span>

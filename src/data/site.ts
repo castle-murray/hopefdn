@@ -1,7 +1,7 @@
 export const site = {
   name: "H.O.P.E. Foundation, Inc.",
   shortName: "H.O.P.E. Foundation",
-  tagline: "Helping Others. Pursuing Excellence.",
+  tagline: "Helping Others Pursue Excellence",
   motto: "Together, We Build Legacy.",
   phone: "757-241-6900",
   phoneHref: "tel:+17572416900",

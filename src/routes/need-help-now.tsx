@@ -513,7 +513,7 @@ function NeedHelpNowPage() {
             take your next step.
           </p>
           <p className="mt-6 text-sm font-semibold uppercase tracking-[0.14em] text-navy">
-            H.O.P.E. Foundation, Inc. · Helping Others Pursue Excellence
+            H.O.P.E. Foundation, Inc.
           </p>
           <a
             href={HELP_TEL}

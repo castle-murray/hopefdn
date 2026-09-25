@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ChevronDown,
@@ -36,6 +36,9 @@ const goldDiscClass =
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Scroll offset captured on the open tap, before the header leaves the flow
+  // (going fixed shifts content and browser scroll anchoring nudges scrollY).
+  const openScrollYRef = useRef<number | null>(null);
   const [socialOpen, setSocialOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [showShop, setShowShop] = useState(true);
@@ -64,6 +67,9 @@ export function Header() {
     const SHOW_BEFORE = 40; // re-show only when back near the very top
 
     const onScroll = () => {
+      // Menu scroll lock (body position:fixed) drops scrollY to 0; ignore it so
+      // the header keeps its size while open and doesn't resize on close.
+      if (document.body.style.position === "fixed") return;
       const y = window.scrollY;
       setHideContactBar((hidden) => {
         if (!hidden && y > HIDE_AFTER) return true;
@@ -102,12 +108,26 @@ export function Header() {
     return () => window.removeEventListener("keydown", onKey);
   }, [socialOpen]);
 
+  // The menu is hamburger-only (below xl). If the viewport grows past xl while
+  // it is open (rotate / resize), close it so the fixed overlay can't linger.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const onChange = () => {
+      if (mq.matches) setMobileOpen(false);
+    };
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [mobileOpen]);
+
   // Lock page scroll while the mobile menu is open; only the menu panel scrolls.
   useEffect(() => {
     if (!mobileOpen) return;
     const html = document.documentElement;
     const body = document.body;
-    const scrollY = window.scrollY;
+    const scrollY = openScrollYRef.current ?? window.scrollY;
+    openScrollYRef.current = null;
     const prev = {
       htmlOverflow: html.style.overflow,
       bodyOverflow: body.style.overflow,
@@ -127,7 +147,9 @@ export function Header() {
       body.style.position = prev.bodyPosition;
       body.style.top = prev.bodyTop;
       body.style.width = prev.bodyWidth;
-      window.scrollTo(0, scrollY);
+      // "instant": the site sets scroll-behavior:smooth, which would animate
+      // up from 0 and let the contact-bar hysteresis shift the landing spot.
+      window.scrollTo({ top: scrollY, behavior: "instant" });
     };
   }, [mobileOpen]);
 
@@ -149,8 +171,15 @@ export function Header() {
     <header
       className={cn(
         "sticky top-0 z-50 w-full bg-ivory",
-        // Cap height + clip so the menu panel (not the page) becomes the scroller.
-        mobileOpen && "flex max-h-dvh flex-col overflow-hidden",
+        // Open menu: pin the header to the viewport. The scroll lock below sets
+        // body{position:fixed; top:-scrollY}, which stops the page scrolling, so
+        // a *sticky* header falls back to its flow position (scrollY px above the
+        // viewport) and the menu ends up off-screen with page content showing
+        // (HOPE-15). Fixed + full height keeps it on top at any scroll offset;
+        // z-[70] also clears other fixed layers (staff bar z-60, need-help-now
+        // call bar z-50) but stays below the flyer lightbox (z-100).
+        mobileOpen &&
+          "fixed inset-x-0 top-0 z-[70] flex h-dvh flex-col overflow-hidden",
       )}
     >
       {/* Contact / utility bar — hides when scrolling down or mobile menu open */}
@@ -406,7 +435,10 @@ export function Header() {
               )}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
-              onClick={() => setMobileOpen((v) => !v)}
+              onClick={() => {
+                if (!mobileOpen) openScrollYRef.current = window.scrollY;
+                setMobileOpen((v) => !v);
+              }}
             >
               {mobileOpen ? (
                 <X className={hideContactBar ? "size-4" : "size-5"} />

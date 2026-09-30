@@ -240,7 +240,7 @@ function HomePage() {
               Who We Are
             </p>
             <h2 className="mt-3 font-display text-3xl font-semibold text-navy text-balance sm:text-4xl">
-              Restoring Faith. Empowering Lives. Building Legacy.
+              Building Legacy Through Compassion, Dignity &amp; Community.
             </h2>
             <p className="mt-5 text-base leading-relaxed text-muted">
               The H.O.P.E. Foundation exists to serve the underrepresented

@@ -58,11 +58,13 @@ type FormState = {
   location: string;
   ctaLabel: string;
   ctaUrl: string;
+  ticketUrl: string;
+  majorEvent: boolean;
   startsAtLocal: string;
   endsAtLocal: string;
   repeat: "none" | "weekly" | "monthly";
   repeatInterval: string;
-  repeatEnd: "until" | "count";
+  repeatEnd: "until" | "count" | "indefinite";
   repeatUntil: string;
   repeatCount: string;
   status: EventStatus;
@@ -86,6 +88,8 @@ const emptyForm = (): FormState => ({
   location: "",
   ctaLabel: "Learn More",
   ctaUrl: "",
+  ticketUrl: "",
+  majorEvent: false,
   startsAtLocal: "",
   endsAtLocal: "",
   repeat: "none",
@@ -125,11 +129,18 @@ function eventToForm(event: CalendarEvent): FormState {
     location: event.location,
     ctaLabel: event.ctaLabel,
     ctaUrl: event.ctaUrl ?? "",
+    ticketUrl: event.ticketUrl ?? "",
+    majorEvent: event.majorEvent,
     startsAtLocal: toLocalInput(event.startsAt),
     endsAtLocal: toLocalInput(event.endsAt),
     repeat: event.recurrenceFreq ?? "none",
     repeatInterval: String(event.recurrenceInterval || 1),
-    repeatEnd: event.recurrenceCount != null && !event.recurrenceUntil ? "count" : "until",
+    repeatEnd:
+      event.recurrenceCount != null && !event.recurrenceUntil
+        ? "count"
+        : event.recurrenceFreq && !event.recurrenceUntil && event.recurrenceCount == null
+          ? "indefinite"
+          : "until",
     repeatUntil: event.recurrenceUntil ? etDateKey(event.recurrenceUntil) : "",
     repeatCount: event.recurrenceCount != null ? String(event.recurrenceCount) : "8",
     status: event.status,
@@ -262,6 +273,8 @@ function ManageEventsPage() {
         location: form.location,
         ctaLabel: form.ctaLabel || "Learn More",
         ctaUrl: form.ctaUrl.trim() ? form.ctaUrl.trim() : null,
+        ticketUrl: form.ticketUrl.trim() ? form.ticketUrl.trim() : null,
+        majorEvent: form.majorEvent,
         startsAt: fromLocalInput(form.startsAtLocal),
         endsAt: form.endsAtLocal ? fromLocalInput(form.endsAtLocal) : null,
         status: form.status,
@@ -567,9 +580,14 @@ function ManageEventsPage() {
                     >
                       <option value="until">On a date</option>
                       <option value="count">After a number of times</option>
+                      <option value="indefinite">No end date</option>
                     </select>
                   </Field>
-                  {form.repeatEnd === "until" ? (
+                  {form.repeatEnd === "indefinite" ? (
+                    <p className="self-end text-sm text-muted">
+                      Repeats with no end date. The public calendar shows the next year.
+                    </p>
+                  ) : form.repeatEnd === "until" ? (
                     <Field label="Last date" required>
                       <input
                         type="date"
@@ -617,6 +635,26 @@ function ManageEventsPage() {
                   />
                 </Field>
               </div>
+              <Field label="Ticket link (optional)">
+                <input
+                  type="url"
+                  className={inputClass}
+                  value={form.ticketUrl}
+                  onChange={(e) => setForm((f) => ({ ...f, ticketUrl: e.target.value }))}
+                  placeholder="https://"
+                  maxLength={2000}
+                />
+              </Field>
+              <label className="flex items-center gap-2 text-sm text-navy">
+                <input
+                  type="checkbox"
+                  checked={form.majorEvent}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, majorEvent: e.target.checked }))
+                  }
+                />
+                Major event (use this event&apos;s banner at the top of the public calendar when it is next)
+              </label>
               <Field label="Status">
                 <select
                   className={inputClass}
@@ -675,19 +713,16 @@ function ManageEventsPage() {
                     <p className="mt-1 text-sm text-muted">
                       {formatEventDate(event.startsAt)} · {formatEventTimeRange(event)}
                       {event.location ? ` · ${event.location}` : ""}
-                      {recurrenceLabel({
-                        freq: event.recurrenceFreq,
-                        interval: event.recurrenceInterval,
-                        until: event.recurrenceUntil,
-                        count: event.recurrenceCount,
-                      })
-                        ? ` · ${recurrenceLabel({
-                            freq: event.recurrenceFreq,
-                            interval: event.recurrenceInterval,
-                            until: event.recurrenceUntil,
-                            count: event.recurrenceCount,
-                          })}`
-                        : ""}
+                      {(() => {
+                        const label = recurrenceLabel({
+                          freq: event.recurrenceFreq,
+                          interval: event.recurrenceInterval,
+                          until: event.recurrenceUntil,
+                          count: event.recurrenceCount,
+                        });
+                        return label ? ` · ${label}` : "";
+                      })()}
+                      {event.majorEvent ? " · Major" : ""}
                     </p>
                   </div>
                 </div>

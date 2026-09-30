@@ -6,6 +6,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
+import { ticketUrlSchema } from "./ticket-url";
 import { requireMcpActorUserId } from "./mcp-auth";
 import {
   mcpCreateEvent,
@@ -204,6 +205,13 @@ export function createHopeEventsMcpServer(): McpServer {
           .nullable()
           .optional()
           .describe("Banner/hero /uploads/events/... or null"),
+        ticketUrl: ticketUrlSchema.describe(
+          "Optional http(s) ticket link. Empty or null clears.",
+        ),
+        majorEvent: z
+          .boolean()
+          .optional()
+          .describe("When true, this event can supply the public calendar banner."),
       },
     },
     async (args) => {
@@ -242,6 +250,10 @@ export function createHopeEventsMcpServer(): McpServer {
           .optional(),
         imageUrl: z.string().trim().max(500).nullable().optional(),
         bannerUrl: z.string().trim().max(500).nullable().optional(),
+        ticketUrl: ticketUrlSchema.describe(
+          "Optional http(s) ticket link. Empty or null clears. Omit to leave unchanged.",
+        ),
+        majorEvent: z.boolean().optional(),
       },
     },
     async (args) => {

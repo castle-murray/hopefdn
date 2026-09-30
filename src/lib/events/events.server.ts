@@ -12,9 +12,11 @@ import {
   currentEtMonth,
   monthBounds,
   nextOccurrenceOnOrAfter,
+  nextOpenOccurrence,
   occurrenceInstants,
   type RecurrenceFields,
 } from "./recurrence";
+import { normalizeTicketUrl } from "./ticket-url";
 import type { CalendarEvent, EventListResult, EventStatus } from "./types";
 
 const MAX_LIMIT = 100;
@@ -28,6 +30,7 @@ type EventRow = {
   location: string;
   cta_label: string;
   cta_url: string | null;
+  ticket_url: string | null;
   image_url: string | null;
   banner_url: string | null;
   starts_at: string | Date;
@@ -37,6 +40,7 @@ type EventRow = {
   recurrence_interval: number | null;
   recurrence_until: string | Date | null;
   recurrence_count: number | null;
+  major_event: boolean;
 };
 
 function toIso(value: string | Date | null | undefined): string | null {
@@ -56,6 +60,7 @@ function mapRow(row: EventRow): CalendarEvent {
     location: row.location,
     ctaLabel: row.cta_label,
     ctaUrl: row.cta_url,
+    ticketUrl: row.ticket_url ?? null,
     imageUrl: row.image_url ?? null,
     bannerUrl: row.banner_url ?? null,
     startsAt: toIso(row.starts_at) as string,
@@ -65,6 +70,7 @@ function mapRow(row: EventRow): CalendarEvent {
     recurrenceInterval: row.recurrence_interval ?? 1,
     recurrenceUntil: toIso(row.recurrence_until),
     recurrenceCount: row.recurrence_count ?? null,
+    majorEvent: row.major_event === true,
   };
 }
 
@@ -77,9 +83,10 @@ function ruleOf(event: CalendarEvent): RecurrenceFields {
   };
 }
 
-const EVENT_SELECT = `id, slug, title, description, location, cta_label, cta_url,
+const EVENT_SELECT = `id, slug, title, description, location, cta_label, cta_url, ticket_url,
              image_url, banner_url, starts_at, ends_at, status,
-             recurrence_freq, recurrence_interval, recurrence_until, recurrence_count`;
+             recurrence_freq, recurrence_interval, recurrence_until, recurrence_count,
+             major_event`;
 
 function clampLimit(limit?: number): number {
   if (limit == null || !Number.isFinite(limit)) return DEFAULT_LIMIT;
@@ -259,6 +266,8 @@ export type MutateEventInput = {
   recurrenceInterval?: number;
   recurrenceUntil?: string | null;
   recurrenceCount?: number | null;
+  ticketUrl?: string | null;
+  majorEvent?: boolean;
 };
 
 function normalizeRecurrence(data: MutateEventInput): RecurrenceFields {
@@ -270,9 +279,6 @@ function normalizeRecurrence(data: MutateEventInput): RecurrenceFields {
   }
   const until = data.recurrenceUntil ?? null;
   const count = data.recurrenceCount ?? null;
-  if (!until && count == null) {
-    throw new Error("A repeating event needs an end date or a count");
-  }
   if (count != null && (count < 1 || count > 500)) {
     throw new Error("Repeat count must be between 1 and 500");
   }
@@ -316,11 +322,12 @@ export async function createEventImpl(
     `insert into events (
          id, slug, title, description, location, cta_label, cta_url, image_url, banner_url,
          starts_at, ends_at, status, created_by, updated_by,
-         recurrence_freq, recurrence_interval, recurrence_until, recurrence_count
+         recurrence_freq, recurrence_interval, recurrence_until, recurrence_count,
+         ticket_url, major_event
        ) values (
          $1, $2, $3, $4, $5, $6, $7, $8, $9,
          $10::timestamptz, $11::timestamptz, $12, $13, $13,
-         $14, $15, $16::timestamptz, $17
+         $14, $15, $16::timestamptz, $17, $18, $19
        )
        returning ${EVENT_SELECT}`,
     [
@@ -341,6 +348,8 @@ export async function createEventImpl(
       recurrence.interval,
       recurrence.until,
       recurrence.count,
+      normalizeTicketUrl(data.ticketUrl) ?? null,
+      data.majorEvent === true,
     ],
   );
   return mapRow(rows[0]!);
@@ -406,7 +415,9 @@ export async function updateEventImpl(
          recurrence_freq = $14,
          recurrence_interval = $15,
          recurrence_until = $16::timestamptz,
-         recurrence_count = $17
+         recurrence_count = $17,
+         ticket_url = $18,
+         major_event = $19
        where id = $1
        returning ${EVENT_SELECT}`,
     [
@@ -427,6 +438,8 @@ export async function updateEventImpl(
       recurrence.interval,
       recurrence.until,
       recurrence.count,
+      normalizeTicketUrl(data.ticketUrl) ?? null,
+      data.majorEvent === true,
     ],
   );
 
@@ -484,6 +497,48 @@ export async function uploadEventImageImpl(
  * Soonest published event with startsAt >= now (public hero / homepage Events tile).
  * Server-only helper — call via getNextUpcomingPublishedEvent createServerFn from routes.
  */
+/**
+ * Soonest published major event whose occurrence has not ended.
+ * Banner callers must use this event's bannerUrl only.
+ */
+export async function fetchNextUpcomingMajorEvent(): Promise<CalendarEvent | null> {
+  const sql = await getSql();
+  const now = new Date();
+  const rows = await sql.query<EventRow>(
+    `select ${EVENT_SELECT}
+     from events
+     where status = 'published'
+       and major_event = true
+       and (
+         (
+           recurrence_freq is null
+           and coalesce(ends_at, starts_at) > $1::timestamptz
+         )
+         or (
+           recurrence_freq is not null
+           and (recurrence_until is null or recurrence_until >= $1::timestamptz - interval '366 days')
+         )
+       )
+     order by starts_at asc, id asc
+     limit 200`,
+    [now.toISOString()],
+  );
+  let best: { at: Date; event: CalendarEvent } | null = null;
+  for (const row of rows) {
+    const event = mapRow(row);
+    const at = nextOpenOccurrence(event.startsAt, ruleOf(event), event.endsAt, now);
+    if (!at) continue;
+    if (
+      !best ||
+      at < best.at ||
+      (at.getTime() === best.at.getTime() && event.id < best.event.id)
+    ) {
+      best = { at, event };
+    }
+  }
+  return best?.event ?? null;
+}
+
 export async function fetchNextUpcomingPublishedEvent(): Promise<CalendarEvent | null> {
   const sql = await getSql();
   const now = new Date();

@@ -133,16 +133,65 @@ function addMonths(year: number, month: number, day: number, months: number) {
   return { year: year2, month: month0 + 1, day: Math.min(day, dim) };
 }
 
+/** Exclusive instant: the start of the ET day after today plus one year. */
+export function indefiniteCutoff(now = new Date()): Date {
+  const parts = civilParts(now);
+  const dayAfter = addDays(parts.year + 1, parts.month, parts.day, 1);
+  return zonedDateTime(dayAfter.year, dayAfter.month, dayAfter.day, 0, 0, 0);
+}
+
+function occurrenceAt(
+  anchorCivil: Civil,
+  freq: RecurrenceFreq,
+  interval: number,
+  index: number,
+): Date {
+  const step = index * interval;
+  const civil =
+    freq === "weekly"
+      ? addDays(anchorCivil.year, anchorCivil.month, anchorCivil.day, step * 7)
+      : addMonths(anchorCivil.year, anchorCivil.month, anchorCivil.day, step);
+  return zonedDateTime(
+    civil.year,
+    civil.month,
+    civil.day,
+    anchorCivil.hour,
+    anchorCivil.minute,
+    anchorCivil.second,
+  );
+}
+
+/** Index at or just before the first occurrence that can fall in rangeFrom. */
+function firstIndexNear(anchorCivil: Civil, freq: RecurrenceFreq, interval: number, rangeFrom: Date): number {
+  const anchorInstant = occurrenceAt(anchorCivil, freq, interval, 0);
+  if (rangeFrom.getTime() <= anchorInstant.getTime()) return 0;
+  const fromCivil = civilParts(rangeFrom);
+  let estimate = 0;
+  if (freq === "weekly") {
+    const a = Date.UTC(anchorCivil.year, anchorCivil.month - 1, anchorCivil.day);
+    const b = Date.UTC(fromCivil.year, fromCivil.month - 1, fromCivil.day);
+    const weeks = Math.floor((b - a) / (7 * 86400000));
+    estimate = Math.floor(weeks / interval) - 1;
+  } else {
+    const months =
+      (fromCivil.year - anchorCivil.year) * 12 + (fromCivil.month - anchorCivil.month);
+    estimate = Math.floor(months / interval) - 1;
+  }
+  return Math.max(0, estimate);
+}
+
 /**
  * Starts that fall in [rangeFrom, rangeTo).
  * One-off: the anchor only. Repeating: the anchor counts as occurrence 1.
- * Stops at count, at until (inclusive), or when the next start is past the range.
+ * Count and until series stop at count or until, and at rangeTo.
+ * Indefinite (no until and no count) also stops one year ahead of today, America/New_York.
  */
 export function occurrenceInstants(
   anchorIso: string,
   rule: RecurrenceFields,
   rangeFrom: Date,
   rangeTo: Date,
+  now = new Date(),
 ): Date[] {
   const anchor = new Date(anchorIso);
   if (Number.isNaN(anchor.getTime())) return [];
@@ -150,29 +199,46 @@ export function occurrenceInstants(
     return anchor >= rangeFrom && anchor < rangeTo ? [anchor] : [];
   }
   const interval = Math.max(1, rule.interval || 1);
-  const cap = Math.min(rule.count ?? 500, 500);
   const untilMs = rule.until ? new Date(rule.until).getTime() : null;
+  const indefinite = rule.until == null && rule.count == null;
+  const horizonMs = indefinite ? indefiniteCutoff(now).getTime() : null;
+  const lastIndex = rule.count == null ? null : Math.min(rule.count, 500) - 1;
   const anchorCivil = civilParts(anchor);
+  let index = firstIndexNear(anchorCivil, rule.freq, interval, rangeFrom);
+  if (lastIndex != null && index > lastIndex) return [];
   const out: Date[] = [];
-  for (let i = 0; i < cap; i += 1) {
-    const step = i * interval;
-    const civil =
-      rule.freq === "weekly"
-        ? addDays(anchorCivil.year, anchorCivil.month, anchorCivil.day, step * 7)
-        : addMonths(anchorCivil.year, anchorCivil.month, anchorCivil.day, step);
-    const occ = zonedDateTime(
-      civil.year,
-      civil.month,
-      civil.day,
-      anchorCivil.hour,
-      anchorCivil.minute,
-      anchorCivil.second,
-    );
+  for (let guard = 0; guard < 800; guard += 1) {
+    if (lastIndex != null && index > lastIndex) break;
+    const occ = occurrenceAt(anchorCivil, rule.freq, interval, index);
+    index += 1;
     if (untilMs != null && occ.getTime() > untilMs) break;
+    if (horizonMs != null && occ.getTime() >= horizonMs) break;
     if (occ.getTime() >= rangeTo.getTime()) break;
     if (occ.getTime() >= rangeFrom.getTime()) out.push(occ);
   }
   return out;
+}
+
+/**
+ * Soonest occurrence that has not ended.
+ * No endsAt: the occurrence ends at its start. With endsAt, the same duration applies to each occurrence.
+ */
+export function nextOpenOccurrence(
+  anchorIso: string,
+  rule: RecurrenceFields,
+  endsAtIso: string | null,
+  now: Date,
+): Date | null {
+  const anchor = new Date(anchorIso);
+  if (Number.isNaN(anchor.getTime())) return null;
+  const endMs = endsAtIso ? new Date(endsAtIso).getTime() : anchor.getTime();
+  const duration = Number.isFinite(endMs) ? Math.max(0, endMs - anchor.getTime()) : 0;
+  const from = new Date(now.getTime() - duration);
+  const to = new Date(now.getTime() + 366 * 15 * 24 * 60 * 60 * 1000);
+  for (const start of occurrenceInstants(anchorIso, rule, from, to, now)) {
+    if (start.getTime() + duration > now.getTime()) return start;
+  }
+  return null;
 }
 
 export function nextOccurrenceOnOrAfter(
@@ -190,5 +256,6 @@ export function recurrenceLabel(rule: RecurrenceFields): string | null {
   const every =
     rule.interval <= 1 ? `Every ${unit}` : `Every ${rule.interval} ${unit}s`;
   if (rule.count) return `${every}, ${rule.count} times`;
+  if (!rule.until) return `${every}, no end date`;
   return every;
 }

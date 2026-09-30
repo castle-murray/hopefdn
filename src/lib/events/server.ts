@@ -12,6 +12,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { authMiddleware } from "@/lib/auth/middleware";
+import { ticketUrlSchema } from "./ticket-url";
 import type { CalendarEvent, EventListResult } from "./types";
 
 const MAX_LIMIT = 100;
@@ -91,6 +92,8 @@ const mutateSchema = z.object({
   recurrenceInterval: z.number().int().min(1).max(52).optional(),
   recurrenceUntil: z.string().datetime({ offset: true }).nullable().optional(),
   recurrenceCount: z.number().int().min(1).max(500).nullable().optional(),
+  ticketUrl: ticketUrlSchema,
+  majorEvent: z.boolean().optional(),
 });
 
 export const createEvent = createServerFn({ method: "POST" })
@@ -137,6 +140,14 @@ export const uploadEventImage = createServerFn({ method: "POST" })
     const { uploadEventImageImpl } = await import("./events.server");
     return uploadEventImageImpl(context.userId, data);
   });
+
+/** Soonest published major event that has not ended. Banner is bannerUrl only. */
+export const getNextUpcomingMajorEvent = createServerFn({ method: "GET" }).handler(
+  async (): Promise<CalendarEvent | null> => {
+    const { fetchNextUpcomingMajorEvent } = await import("./events.server");
+    return fetchNextUpcomingMajorEvent();
+  },
+);
 
 /** Soonest published event with startsAt >= now (public hero / homepage Events tile). */
 export const getNextUpcomingPublishedEvent = createServerFn({ method: "GET" }).handler(

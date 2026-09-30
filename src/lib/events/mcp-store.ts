@@ -6,6 +6,7 @@
  */
 import { z } from "zod";
 import { getSql } from "@/lib/db";
+import { normalizeTicketUrl, ticketUrlSchema } from "./ticket-url";
 import type { CalendarEvent, EventListResult, EventStatus } from "./types";
 
 const MAX_LIMIT = 100;
@@ -19,6 +20,7 @@ type EventRow = {
   location: string;
   cta_label: string;
   cta_url: string | null;
+  ticket_url: string | null;
   image_url: string | null;
   banner_url: string | null;
   starts_at: string | Date;
@@ -28,6 +30,7 @@ type EventRow = {
   recurrence_interval: number | null;
   recurrence_until: string | Date | null;
   recurrence_count: number | null;
+  major_event: boolean;
 };
 
 function toIso(value: string | Date | null | undefined): string | null {
@@ -46,6 +49,7 @@ function mapRow(row: EventRow): CalendarEvent {
     location: row.location,
     ctaLabel: row.cta_label,
     ctaUrl: row.cta_url,
+    ticketUrl: row.ticket_url ?? null,
     imageUrl: row.image_url ?? null,
     bannerUrl: row.banner_url ?? null,
     startsAt: toIso(row.starts_at) as string,
@@ -55,12 +59,14 @@ function mapRow(row: EventRow): CalendarEvent {
     recurrenceInterval: row.recurrence_interval ?? 1,
     recurrenceUntil: toIso(row.recurrence_until),
     recurrenceCount: row.recurrence_count ?? null,
+    majorEvent: row.major_event === true,
   };
 }
 
-const EVENT_SELECT = `id, slug, title, description, location, cta_label, cta_url,
+const EVENT_SELECT = `id, slug, title, description, location, cta_label, cta_url, ticket_url,
              image_url, banner_url, starts_at, ends_at, status,
-             recurrence_freq, recurrence_interval, recurrence_until, recurrence_count`;
+             recurrence_freq, recurrence_interval, recurrence_until, recurrence_count,
+             major_event`;
 
 function clampLimit(limit?: number): number {
   if (limit == null || !Number.isFinite(limit)) return DEFAULT_LIMIT;
@@ -267,6 +273,10 @@ export const mcpCreateInputSchema = z
     image_url: z.string().trim().max(500).nullable().optional(),
     bannerUrl: z.string().trim().max(500).nullable().optional(),
     banner_url: z.string().trim().max(500).nullable().optional(),
+    ticketUrl: ticketUrlSchema,
+    ticket_url: ticketUrlSchema,
+    majorEvent: z.boolean().optional(),
+    major_event: z.boolean().optional(),
   })
   .refine((v) => Boolean(v.startsAt || v.starts_at), {
     message: "startsAt (or starts_at) is required",
@@ -296,6 +306,9 @@ export async function mcpCreateEvent(
   const ctaLabel = data.cta_label ?? data.ctaLabel ?? "Learn More";
   const ctaUrl =
     data.cta_url !== undefined ? data.cta_url : (data.ctaUrl ?? null);
+  const ticketRaw = data.ticketUrl !== undefined ? data.ticketUrl : data.ticket_url;
+  const ticketUrl = normalizeTicketUrl(ticketRaw ?? null) ?? null;
+  const majorEvent = data.majorEvent ?? data.major_event ?? false;
 
   const sql = await getSql();
   const id = crypto.randomUUID();
@@ -304,10 +317,10 @@ export async function mcpCreateEvent(
   const rows = await sql.query<EventRow>(
     `insert into events (
        id, slug, title, description, location, cta_label, cta_url, image_url, banner_url,
-       starts_at, ends_at, status, created_by, updated_by
+       starts_at, ends_at, status, created_by, updated_by, ticket_url, major_event
      ) values (
        $1, $2, $3, $4, $5, $6, $7, $8, $9,
-       $10::timestamptz, $11::timestamptz, $12, $13, $13
+       $10::timestamptz, $11::timestamptz, $12, $13, $13, $14, $15
      )
      returning ${EVENT_SELECT}`,
     [
@@ -324,6 +337,8 @@ export async function mcpCreateEvent(
       endsAt,
       data.status ?? "published",
       actorUserId,
+      ticketUrl,
+      majorEvent,
     ],
   );
   return mapRow(rows[0]!);
@@ -357,6 +372,10 @@ export const mcpUpdateInputSchema = z.object({
   /** Banner path, or null to clear. Omit to leave unchanged. */
   bannerUrl: z.string().trim().max(500).nullable().optional(),
   banner_url: z.string().trim().max(500).nullable().optional(),
+  ticketUrl: ticketUrlSchema,
+  ticket_url: ticketUrlSchema,
+  majorEvent: z.boolean().optional(),
+  major_event: z.boolean().optional(),
 });
 
 export async function mcpUpdateEvent(
@@ -394,6 +413,18 @@ export async function mcpUpdateEvent(
         ? data.ends_at
         : toIso(cur.ends_at);
   const status = data.status ?? cur.status;
+  const ticketUrl =
+    data.ticketUrl !== undefined || data.ticket_url !== undefined
+      ? (normalizeTicketUrl(
+          data.ticketUrl !== undefined ? data.ticketUrl : data.ticket_url,
+        ) ?? null)
+      : cur.ticket_url;
+  const majorEvent =
+    data.majorEvent !== undefined
+      ? data.majorEvent
+      : data.major_event !== undefined
+        ? data.major_event
+        : cur.major_event === true;
 
   if (endsAt && new Date(endsAt) < new Date(startsAt)) {
     throw new Error("endsAt must be on or after startsAt");
@@ -442,7 +473,9 @@ export async function mcpUpdateEvent(
        ends_at = $11::timestamptz,
        status = $12,
        updated_by = $13,
-       updated_at = now()
+       updated_at = now(),
+       ticket_url = $14,
+       major_event = $15
      where id = $1
      returning ${EVENT_SELECT}`,
     [
@@ -459,6 +492,8 @@ export async function mcpUpdateEvent(
       endsAt,
       status,
       actorUserId,
+      ticketUrl,
+      majorEvent,
     ],
   );
 

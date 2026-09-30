@@ -7,10 +7,9 @@ import { Button } from "@/components/ui/button";
 import { site } from "@/data/site";
 import {
   canManageEvents,
-  getNextUpcomingPublishedEvent,
+  getNextUpcomingMajorEvent,
   listCalendarMonth,
 } from "@/lib/events/server";
-import { resolveEventHeroUrl } from "@/lib/events/types";
 import {
   currentEtMonth,
   daysInEtMonth,
@@ -24,13 +23,6 @@ import {
 } from "@/lib/events/format";
 import type { CalendarEvent } from "@/lib/events/types";
 
-const DEFAULT_EVENTS_HERO = {
-  src: "/images/events-experiences-w800.webp",
-  srcSet:
-    "/images/events-experiences-w800.webp 800w, /images/events-experiences-w1200.webp 1200w, /images/events-experiences.webp 1400w",
-  alt: "Guests in festive hats celebrating at a HOPE Foundation community event",
-} as const;
-
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 type Occurrence = CalendarEvent & {
@@ -41,12 +33,12 @@ type Occurrence = CalendarEvent & {
 export const Route = createFileRoute("/events")({
   loader: async () => {
     const month = currentEtMonth();
-    const [calendar, canManage, nextUpcoming] = await Promise.all([
+    const [calendar, canManage, majorEvent] = await Promise.all([
       listCalendarMonth({ data: { month } }),
       canManageEvents(),
-      getNextUpcomingPublishedEvent(),
+      getNextUpcomingMajorEvent(),
     ]);
-    return { calendar, canManage, nextUpcoming };
+    return { calendar, canManage, majorEvent };
   },
   component: EventsPage,
   head: () => ({
@@ -73,7 +65,7 @@ function monthTitle(month: string): string {
 
 function EventsPage() {
   const loaded = Route.useLoaderData();
-  const { canManage, nextUpcoming } = loaded;
+  const { canManage, majorEvent } = loaded;
   const [month, setMonth] = useState(loaded.calendar.month);
   const [occurrences, setOccurrences] = useState<Occurrence[]>(loaded.calendar.occurrences);
   const [selected, setSelected] = useState<string | null>(() => {
@@ -82,8 +74,7 @@ function EventsPage() {
   });
   const [busy, setBusy] = useState(false);
 
-  const heroUrl = resolveEventHeroUrl(nextUpcoming);
-  const heroIsFlyer = Boolean(heroUrl) && !nextUpcoming?.bannerUrl;
+  const heroUrl = majorEvent?.bannerUrl || null;
 
   const byDay = useMemo(() => {
     const map = new Map<string, Occurrence[]>();
@@ -137,35 +128,19 @@ function EventsPage() {
 
       <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
-            {heroUrl ? (
+          {heroUrl ? (
+            <div className="mb-10 overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
               <img
                 src={heroUrl}
-                alt={
-                  nextUpcoming
-                    ? `${nextUpcoming.title} — upcoming event banner`
-                    : DEFAULT_EVENTS_HERO.alt
-                }
+                alt={`${majorEvent?.title ?? "Upcoming event"} — event banner`}
                 width={1400}
                 height={600}
-                className={`aspect-[21/9] w-full object-cover ${heroIsFlyer ? "object-top" : "object-center"}`}
+                className="aspect-[21/9] w-full object-cover object-center"
                 fetchPriority="high"
                 decoding="async"
               />
-            ) : (
-              <img
-                src={DEFAULT_EVENTS_HERO.src}
-                srcSet={DEFAULT_EVENTS_HERO.srcSet}
-                sizes="100vw"
-                alt={DEFAULT_EVENTS_HERO.alt}
-                width={1400}
-                height={600}
-                className="aspect-[21/9] w-full object-cover object-[22%_32%]"
-                fetchPriority="high"
-                decoding="async"
-              />
-            )}
-          </div>
+            </div>
+          ) : null}
 
           {canManage ? (
             <div className="mb-8 flex justify-end">
@@ -288,6 +263,13 @@ function EventsPage() {
                               <a href={site.emailHref}>{event.ctaLabel}</a>
                             )}
                           </Button>
+                          {event.ticketUrl ? (
+                            <Button asChild variant="outline" size="sm">
+                              <a href={event.ticketUrl} target="_blank" rel="noopener noreferrer">
+                                Tickets
+                              </a>
+                            </Button>
+                          ) : null}
                           <Button asChild variant="outline" size="sm">
                             <Link to="/get-involved">Volunteer</Link>
                           </Button>

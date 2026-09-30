@@ -1,23 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
-  Building2,
+  Briefcase,
   Calendar,
+  FileText,
   Heart,
   HeartHandshake,
-  HandHeart,
+  HeartPulse,
+  HelpCircle,
+  Home,
+  Package,
   Phone,
-  ShoppingBag,
-  Users,
+  Shield,
+  Utensils,
 } from "lucide-react";
-import { AnniversaryBadge } from "@/components/anniversary-badge";
 import { Button } from "@/components/ui/button";
-import { impactStats, quickLinks, site } from "@/data/site";
-import {
-  getNextUpcomingPublishedEvent,
-  listEvents,
-} from "@/lib/events/server";
-import { resolveEventHeroUrl } from "@/lib/events/types";
+import { impactStats, site } from "@/data/site";
+import { listEvents } from "@/lib/events/server";
 import {
   formatEventDate,
   formatEventTimeRange,
@@ -25,13 +24,12 @@ import {
 import {
   CARD_SRCSET_WIDTHS,
   imgSrcSet,
-  QUICK_LINK_SIZES,
 } from "@/lib/images";
 import { getShopVisibility } from "@/lib/shop/server";
 
 export const Route = createFileRoute("/")({
   loader: async () => {
-    const [list, shop, nextUpcoming] = await Promise.all([
+    const [list, shop] = await Promise.all([
       listEvents({
         data: {
           from: new Date().toISOString(),
@@ -42,14 +40,10 @@ export const Route = createFileRoute("/")({
         publicEnabled: false,
         canAccess: false,
       })),
-      getNextUpcomingPublishedEvent(),
     ]);
     return {
       events: list.events,
-      // Public storefront flag — card stays visible either way; "Coming soon" when off.
       shopPublic: shop.publicEnabled,
-      /** Next published event (startsAt >= now) — drives Events quick-link tile image. */
-      nextUpcoming,
     };
   },
   component: HomePage,
@@ -63,223 +57,141 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-const iconMap = {
-  calendar: Calendar,
-  "shopping-bag": ShoppingBag,
-  "heart-handshake": HeartHandshake,
-  building: Building2,
-  users: Users,
-} as const;
-
-const heroBtn =
-  "h-8 shrink-0 gap-1 rounded-full px-2.5 text-[0.62rem] font-semibold uppercase tracking-[0.04em] sm:h-9 sm:px-3 sm:text-[0.65rem] [&_svg]:size-3";
-
-const quickLinkCardClass =
-  "group relative flex min-h-[11.5rem] overflow-hidden rounded-2xl border border-border shadow-[var(--shadow-card)] transition sm:min-h-[13rem]";
+/** Guest-facing shortcuts under the hero → every subject on /need-help-now. */
+const guestHelpLinks = [
+  {
+    hash: "shelter",
+    label: "Shelter",
+    icon: Home,
+    iconClass: "bg-[#dbeafe] text-[#2563eb]",
+  },
+  {
+    hash: "food",
+    label: "Food",
+    icon: Utensils,
+    iconClass: "bg-[#ffedd5] text-[#ea580c]",
+  },
+  {
+    hash: "documents",
+    label: "IDs / Docs",
+    icon: FileText,
+    iconClass: "bg-[#ede9fe] text-[#7c3aed]",
+  },
+  {
+    hash: "counseling",
+    label: "Counseling",
+    icon: HeartHandshake,
+    iconClass: "bg-[#ffe4e6] text-[#e11d48]",
+  },
+  {
+    hash: "supplies",
+    label: "Supplies",
+    icon: Package,
+    iconClass: "bg-[#d1fae5] text-[#059669]",
+  },
+  {
+    hash: "jobs",
+    label: "Jobs",
+    icon: Briefcase,
+    iconClass: "bg-[#fef3c7] text-[#d97706]",
+  },
+  {
+    hash: "benefits",
+    label: "Benefits",
+    icon: HeartPulse,
+    iconClass: "bg-[#fce7f3] text-[#db2777]",
+  },
+  {
+    hash: "veterans",
+    label: "Veterans",
+    icon: Shield,
+    iconClass: "bg-[#e0e7ff] text-[#4f46e5]",
+  },
+  {
+    hash: "other",
+    label: "Other",
+    icon: HelpCircle,
+    iconClass: "bg-[#f1f5f9] text-[#475569]",
+  },
+] as const;
 
 function HomePage() {
-  const { events, shopPublic, nextUpcoming } = Route.useLoaderData();
-  const eventsTileUrl = resolveEventHeroUrl(nextUpcoming);
-  // Tile fell back to the flyer (no bannerUrl): anchor crop to top.
-  const eventsTileIsFlyer = Boolean(eventsTileUrl) && !nextUpcoming?.bannerUrl;
+  const { events, shopPublic } = Route.useLoaderData();
   return (
     <>
-      {/* Hero — cream wash + dark type (stronger scrim on mobile for legibility) */}
-      <section className="relative min-h-[min(78vh,640px)] overflow-hidden bg-ivory sm:min-h-[min(72vh,640px)]">
+      {/* Hero — hug photo with mockup headline; no scrim, no CTAs on the image */}
+      <section className="relative min-h-[min(78vh,640px)] overflow-hidden bg-navy sm:min-h-[min(72vh,640px)]">
         <img
-          src="/images/hero-community-w1280.webp"
-          srcSet="/images/hero-community-w800.webp 800w, /images/hero-community-w1280.webp 1280w, /images/hero-community.webp 1728w"
+          src="/images/hero-hug-w1280.webp"
+          srcSet="/images/hero-hug-w800.webp 800w, /images/hero-hug-w1280.webp 1280w, /images/hero-hug.webp 1360w"
           sizes="100vw"
-          alt="H.O.P.E. Foundation volunteers and children sharing a joyful moment outdoors"
-          width={1728}
-          height={1152}
-          className="absolute inset-0 h-full w-full object-cover object-[55%_40%] sm:object-[62%_42%]"
+          alt="Two people sharing a supportive embrace outdoors"
+          width={1360}
+          height={768}
+          className="absolute inset-0 h-full w-full object-cover object-[50%_35%]"
           fetchPriority="high"
           decoding="async"
         />
-        <div className="hero-overlay absolute inset-0" />
 
         <div className="relative mx-auto flex min-h-[min(78vh,640px)] max-w-7xl flex-col justify-center px-4 py-14 sm:min-h-[min(72vh,640px)] sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-          <div className="max-w-2xl">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-gold-dark sm:mb-4 sm:text-sm">
-              Building Legacy Through
-            </p>
-            <h1 className="font-display text-[2rem] font-semibold leading-[1.1] tracking-tight text-navy text-balance sm:text-5xl lg:text-6xl xl:text-[4.25rem]">
-              Compassion,{" "}
-              <span className="text-gold-dark">Dignity</span> &{" "}
-              Community.
+          <div className="max-w-2xl text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.6)]">
+            <h1 className="font-hero text-[3.25rem] font-normal leading-[1.05] tracking-wide text-balance sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
+              You are
+              <span className="mt-1 block sm:mt-2">Not alone</span>
             </h1>
-            <p className="mt-4 flex flex-wrap items-center gap-2 text-[0.95rem] text-navy/85 sm:mt-5 sm:text-lg">
-              <Heart className="size-4 shrink-0 text-gold-dark" aria-hidden />
-              <span>
-                Celebrating{" "}
-                <strong className="font-semibold text-gold-dark">
-                  {site.yearsOfImpact} Years
-                </strong>{" "}
-                of Impact Across {site.region}.
-              </span>
+            <p className="mt-5 max-w-lg text-base font-semibold leading-snug tracking-wide sm:mt-6 sm:text-lg lg:text-xl">
+              Food. Resources. Support.
+              <br />
+              A Brighter Tomorrow
             </p>
-
-            {/* Prominent guest CTA — hard to miss on mobile */}
-            <div className="mt-5 sm:mt-6">
-              <Button
-                asChild
-                variant="gold"
-                size="xl"
-                className="h-14 w-full max-w-md gap-2 rounded-xl px-6 text-base font-bold uppercase tracking-[0.06em] shadow-[var(--shadow-gold)] sm:w-auto sm:text-lg"
-              >
-                <Link to="/need-help-now">
-                  <Phone className="size-5" aria-hidden />
-                  Get Help Now
-                </Link>
-              </Button>
-              <p className="mt-2 text-xs font-medium text-navy/70 sm:text-sm">
-                Hungry, homeless, or need documents? Start here.
-              </p>
-            </div>
-          </div>
-
-          {/* CTAs sit below the copy column so a single compact row has room to fit */}
-          <div className="mt-5 flex flex-row flex-nowrap items-center gap-1.5 overflow-x-auto pb-0.5 sm:mt-6 sm:gap-2 sm:overflow-visible">
-            {/* Alternate gold / navy so CTAs stay readable over the photo wash */}
-            <Button asChild variant="gold" className={heroBtn}>
-              <a
-                href={site.donateUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <HandHeart aria-hidden />
-                Support the Mission
-              </a>
-            </Button>
-            <Button asChild variant="default" className={heroBtn}>
-              <Link to="/impact">
-                <Users aria-hidden />
-                Explore Our Impact
-              </Link>
-            </Button>
-            <Button asChild variant="gold" className={heroBtn}>
-              <Link to="/events">
-                <Calendar aria-hidden />
-                Upcoming Events
-              </Link>
-            </Button>
-            <Button asChild variant="default" className={heroBtn}>
-              <Link to="/partners">
-                <HeartHandshake aria-hidden />
-                Become a Partner
-              </Link>
-            </Button>
-          </div>
-
-          {/* 10 Years commemorative seal — smaller / lower opacity on mobile so it doesn't fight copy */}
-          <div className="pointer-events-none absolute bottom-4 right-2 scale-75 opacity-90 sm:bottom-10 sm:right-6 sm:scale-100 sm:opacity-100 lg:bottom-14 lg:right-10">
-            <AnniversaryBadge />
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-white/95 sm:text-base lg:text-lg">
+              H.O.P.E meets people where they are and helps them take the next
+              step.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Quick links strip */}
-      <section className="relative z-10 -mt-8 pb-4 sm:-mt-12">
+      {/* Guest help shortcuts — one card per Need Help Now subject */}
+      <section className="relative z-10 bg-ivory pb-8 pt-2 sm:pb-10 sm:pt-4">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {quickLinks.map((item) => {
-              const Icon = iconMap[item.icon];
-              const comingSoon =
-                item.href === "/legacy" && !shopPublic;
-
-              // Events tile: next upcoming banner → flyer → static quickLinks image.
-              const tileImage =
-                item.href === "/events" && eventsTileUrl
-                  ? eventsTileUrl
-                  : item.image;
-              const tileIsUpload = tileImage.startsWith("/uploads/");
-              const tileIsFlyer =
-                item.href === "/events" && tileImage === eventsTileUrl && eventsTileIsFlyer;
-
-              const media = (
-                <>
-                  <img
-                    src={
-                      tileIsUpload
-                        ? tileImage
-                        : tileImage.replace(/\.webp$/i, "-w800.webp")
-                    }
-                    srcSet={
-                      tileIsUpload
-                        ? undefined
-                        : imgSrcSet(tileImage, [...CARD_SRCSET_WIDTHS])
-                    }
-                    sizes={QUICK_LINK_SIZES}
-                    alt=""
-                    width={1200}
-                    height={800}
-                    className={
-                      comingSoon
-                        ? "absolute inset-0 h-full w-full object-cover"
-                        : "absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                    }
-                    style={
-                      tileIsUpload
-                        ? { objectPosition: tileIsFlyer ? "center top" : "center" }
-                        : "imagePosition" in item && item.imagePosition
-                          ? { objectPosition: item.imagePosition }
-                          : undefined
-                    }
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <div className="quick-link-overlay absolute inset-0" />
-                  {comingSoon ? (
-                    <span className="absolute right-3 top-3 z-10 rounded-full bg-gold px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-navy-deep shadow">
-                      Coming soon
-                    </span>
-                  ) : null}
-                  {/* Icon sits ~1/4 down on the right, separate from bottom copy */}
-                  <span className="absolute right-3 top-1/4 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-gold text-navy-deep shadow">
-                    <Icon className="size-5" aria-hidden />
-                  </span>
-                  <div className="relative z-10 flex h-full w-full flex-col justify-end p-4">
-                    <h2
-                      className={
-                        comingSoon
-                          ? "font-display text-lg font-semibold leading-snug text-navy"
-                          : "font-display text-lg font-semibold leading-snug text-navy transition group-hover:text-gold-dark"
-                      }
-                    >
-                      {item.title}
-                    </h2>
-                    <p className="mt-1 text-xs leading-relaxed text-navy/80">
-                      {comingSoon
-                        ? "Merchandise that carries the mission — launching soon."
-                        : item.description}
-                    </p>
-                  </div>
-                </>
-              );
-
-              if (comingSoon) {
-                return (
-                  <div
-                    key={item.href}
-                    className={quickLinkCardClass}
-                    aria-label={`${item.title}: Coming soon`}
-                  >
-                    {media}
-                  </div>
-                );
-              }
-
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={`${quickLinkCardClass} hover:-translate-y-1 hover:shadow-[var(--shadow-elevated)]`}
+          <h2 className="mx-auto mb-4 w-fit rounded-xl gradient-gold px-5 py-2 text-center font-display text-2xl font-semibold tracking-tight text-black sm:mb-5 sm:px-6 sm:py-2.5 sm:text-3xl">
+            I need&hellip;
+          </h2>
+          <nav
+            aria-label="Get help now"
+            className="grid grid-cols-3 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-5 lg:grid-cols-9"
+          >
+            {guestHelpLinks.map(({ hash, label, icon: Icon, iconClass }) => (
+              <Link
+                key={hash}
+                to="/need-help-now"
+                hash={hash}
+                className="group flex flex-col items-center gap-2.5 rounded-2xl border border-black/5 bg-white px-2 py-4 text-center shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(15,23,42,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/80 active:scale-[0.99] sm:gap-3 sm:px-3 sm:py-5"
+              >
+                <span
+                  className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${iconClass}`}
                 >
-                  {media}
-                </Link>
-              );
-            })}
+                  <Icon className="size-6 sm:size-7" strokeWidth={1.6} aria-hidden />
+                </span>
+                <span className="text-[0.75rem] font-semibold leading-snug tracking-tight text-slate-800 sm:text-[0.8rem] lg:text-[0.85rem]">
+                  {label}
+                </span>
+              </Link>
+            ))}
+          </nav>
+          <div className="mt-5 flex justify-center sm:mt-6">
+            <Button
+              asChild
+              variant="default"
+              size="lg"
+              className="h-auto min-h-12 w-full max-w-xl gap-2 rounded-xl bg-navy px-5 py-3 text-center text-sm font-bold text-gold shadow-sm hover:bg-navy-mid hover:text-gold-light sm:w-auto sm:text-base"
+            >
+              <a href={site.phoneHref}>
+                <Phone className="size-5 shrink-0" aria-hidden />
+                I&apos;m not sure what I need — Talk to H.O.P.E.
+              </a>
+            </Button>
           </div>
         </div>
       </section>
@@ -305,49 +217,45 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Mission block */}
+      {/* Who We Are — photo + copy from new-direction mockup */}
       <section className="bg-cream/60 py-16 sm:py-20">
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
-          <div className="relative">
-            <div className="overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
-              <img
-                src="/images/impact-counseling-w800.webp"
-                srcSet={imgSrcSet("/images/impact-counseling.webp", [
-                  ...CARD_SRCSET_WIDTHS,
-                ])}
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                alt="A HOPE counselor meeting with a guest in a welcoming community space"
-                width={1200}
-                height={900}
-                className="aspect-[4/3] w-full object-cover"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-            <div className="absolute -bottom-5 -right-2 max-w-[220px] rounded-xl border border-border bg-surface p-4 shadow-[var(--shadow-card)] sm:-right-4">
-              <p className="font-display text-lg italic text-navy">
-                &ldquo;Inspiring hope—one act of kindness at a time.&rdquo;
-              </p>
-            </div>
+          <div className="overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
+            <img
+              src="/images/who-we-are-w800.webp"
+              srcSet={imgSrcSet("/images/who-we-are.webp", [
+                ...CARD_SRCSET_WIDTHS,
+              ])}
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              alt="Guests and volunteers standing together outdoors at a H.O.P.E. gathering"
+              width={1200}
+              height={625}
+              className="aspect-[16/9] w-full object-cover object-center"
+              loading="lazy"
+              decoding="async"
+            />
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-dark">
               Who We Are
             </p>
             <h2 className="mt-3 font-display text-3xl font-semibold text-navy text-balance sm:text-4xl">
-              Restoring faith. Empowering lives. Building legacy.
+              Restoring Faith. Empowering Lives. Building Legacy.
             </h2>
             <p className="mt-5 text-base leading-relaxed text-muted">
-              H.O.P.E. Foundation, Inc. serves the under-represented homeless
-              population of {site.region}—our cherished guests. Grounded in
-              Christian love, we provide shelter, meals, and a full spectrum of
-              essential resources so every person can pursue excellence with
-              dignity.
+              The H.O.P.E. Foundation exists to serve the underrepresented
+              homeless population — our cherished guests. Operating under
+              biblical principles, we provide shelter, meals, and essential
+              services to the disadvantaged and homeless population of Hampton
+              Roads. We are a 501(c)(3) nonprofit grounded in Christian love.
             </p>
-            <p className="mt-4 text-base leading-relaxed text-muted">
-              When we focus on His goodness, His power, and His grace, we begin
-              to change. We begin to be more like Jesus.{" "}
-              <strong className="font-semibold text-navy">Inspiring hope.</strong>
+            <p className="mt-5 font-display text-lg italic leading-relaxed text-navy sm:text-xl">
+              &ldquo;When we focus on His goodness, His power, and His grace, we
+              begin to change. We begin to be more like Jesus.{" "}
+              <span className="font-semibold not-italic text-gold-dark">
+                Inspiring Hope.
+              </span>
+              &rdquo;
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild variant="default" size="lg">

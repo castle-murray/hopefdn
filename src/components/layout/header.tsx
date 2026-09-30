@@ -2,30 +2,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ChevronDown,
-  Facebook,
   Heart,
-  Instagram,
-  Linkedin,
   Mail,
   Menu,
   Phone,
-  Share2,
   X,
-  Youtube,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { mainNav, site } from "@/data/site";
 import { getShopVisibility } from "@/lib/shop/server";
 import { cn } from "@/lib/utils";
 
-const socialLinks = [
-  { href: site.social.facebook, label: "Facebook", Icon: Facebook },
-  { href: site.social.instagram, label: "Instagram", Icon: Instagram },
-  { href: site.social.youtube, label: "YouTube", Icon: Youtube },
-  { href: site.social.linkedin, label: "LinkedIn", Icon: Linkedin },
-] as const;
-
-/** Gold filled disc with navy icon strokes (phone, email, socials). */
+/** Gold filled disc with navy icon strokes (phone, email). */
 const goldDiscStyle = {
   background:
     "radial-gradient(circle at 32% 28%, #f5e6a8 0%, #dfc15a 38%, #c9a227 72%, #a6841c 100%)",
@@ -39,7 +27,6 @@ export function Header() {
   // Scroll offset captured on the open tap, before the header leaves the flow
   // (going fixed shifts content and browser scroll anchoring nudges scrollY).
   const openScrollYRef = useRef<number | null>(null);
-  const [socialOpen, setSocialOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [showShop, setShowShop] = useState(true);
   const [hideContactBar, setHideContactBar] = useState(false);
@@ -90,23 +77,7 @@ export function Header() {
   // Close drawers on navigation so they never stick open on a new page.
   useEffect(() => {
     setMobileOpen(false);
-    setSocialOpen(false);
   }, [pathname]);
-
-  // Close social sheet when the contact bar collapses (scroll / mobile nav).
-  useEffect(() => {
-    if (hideContactBar || mobileOpen) setSocialOpen(false);
-  }, [hideContactBar, mobileOpen]);
-
-  // Escape closes the social overlay.
-  useEffect(() => {
-    if (!socialOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSocialOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [socialOpen]);
 
   // The menu is hamburger-only (below xl). If the viewport grows past xl while
   // it is open (rotate / resize), close it so the fixed overlay can't linger.
@@ -235,33 +206,15 @@ export function Header() {
                 />
               </p>
 
-              <div className="flex items-center gap-3 sm:gap-4">
-                {/* Desktop: full social row */}
-                <div className="hidden items-center gap-2 sm:flex">
-                  {socialLinks.map(({ href, label, Icon }) => (
-                    <SocialIcon key={label} href={href} label={label}>
-                      <Icon className="size-3.5" />
-                    </SocialIcon>
-                  ))}
-                </div>
-
-                {/* Mobile: single social button → overlay menu */}
-                <button
-                  type="button"
-                  className={`${goldDiscClass} transition hover:brightness-110 active:scale-95 sm:hidden`}
-                  style={goldDiscStyle}
-                  aria-label={socialOpen ? "Close social links" : "Social media links"}
-                  aria-expanded={socialOpen}
-                  aria-haspopup="dialog"
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Link
+                  to="/need-help-now"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-gold/70 bg-cream/10 px-3 text-xs font-bold uppercase tracking-wide text-gold-light transition hover:border-gold hover:bg-cream/15 hover:text-gold sm:px-3.5"
                   tabIndex={contactBarHidden ? -1 : undefined}
-                  onClick={() => setSocialOpen((v) => !v)}
                 >
-                  {socialOpen ? (
-                    <X className="size-3.5" aria-hidden />
-                  ) : (
-                    <Share2 className="size-3.5" aria-hidden />
-                  )}
-                </button>
+                  <Phone className="size-3.5" aria-hidden />
+                  Get Help Now
+                </Link>
 
                 <a
                   href={site.donateUrl}
@@ -278,56 +231,6 @@ export function Header() {
           </div>
         </div>
       </div>
-
-      {/* Mobile social overlay — only while contact bar is visible */}
-      {socialOpen && !contactBarHidden ? (
-        <div
-          className="fixed inset-0 z-[60] sm:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Social media"
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-navy-deep/55 backdrop-blur-[2px]"
-            aria-label="Dismiss social menu"
-            onClick={() => setSocialOpen(false)}
-          />
-          <div className="absolute inset-x-4 top-[max(4.5rem,env(safe-area-inset-top))] mx-auto max-w-sm rounded-2xl border border-gold/30 bg-navy p-4 shadow-[var(--shadow-elevated)]">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gold-light">
-                Connect with us
-              </p>
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-cream/80 transition hover:bg-cream/10 hover:text-cream"
-                aria-label="Close"
-                onClick={() => setSocialOpen(false)}
-              >
-                <X className="size-4" aria-hidden />
-              </button>
-            </div>
-            <ul className="flex flex-col gap-2">
-              {socialLinks.map(({ href, label, Icon }) => (
-                <li key={label}>
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 rounded-xl border border-cream/10 bg-cream/5 px-3 py-3 text-sm font-semibold text-cream transition hover:border-gold/40 hover:bg-cream/10"
-                    onClick={() => setSocialOpen(false)}
-                  >
-                    <span className={goldDiscClass} style={goldDiscStyle}>
-                      <Icon className="size-3.5" aria-hidden />
-                    </span>
-                    {label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      ) : null}
 
       {/* Main nav — sticky; slim when scrolled */}
       <div
@@ -502,28 +405,5 @@ function ContactGlyph({ children }: { children: React.ReactNode }) {
     <span className={goldDiscClass} style={goldDiscStyle} aria-hidden>
       {children}
     </span>
-  );
-}
-
-function SocialIcon({
-  href,
-  label,
-  children,
-}: {
-  href: string;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={label}
-      className={`${goldDiscClass} transition hover:brightness-110 active:scale-95`}
-      style={goldDiscStyle}
-    >
-      {children}
-    </a>
   );
 }

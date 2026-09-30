@@ -3,9 +3,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Briefcase,
   FileText,
+  HeartHandshake,
   HeartPulse,
   HelpCircle,
   Home,
+  Package,
   Phone,
   Shield,
   Utensils,
@@ -34,13 +36,15 @@ const HELP_PHONE = "757-241-6900";
 const HELP_TEL = "tel:+17572416900";
 
 const jumpLinks = [
+  { id: "shelter", label: "Shelter", icon: Home },
   { id: "food", label: "Food", icon: Utensils },
-  { id: "shelter", label: "Shelter/Housing", icon: Home },
-  { id: "documents", label: "Documents", icon: FileText },
-  { id: "jobs", label: "Jobs/Education", icon: Briefcase },
+  { id: "documents", label: "IDs / Docs", icon: FileText },
+  { id: "counseling", label: "Counseling", icon: HeartHandshake },
+  { id: "supplies", label: "Supplies", icon: Package },
+  { id: "jobs", label: "Jobs", icon: Briefcase },
   { id: "benefits", label: "Benefits", icon: HeartPulse },
   { id: "veterans", label: "Veterans", icon: Shield },
-  { id: "other", label: "Other Help", icon: HelpCircle },
+  { id: "other", label: "Other", icon: HelpCircle },
 ] as const;
 
 function CallHopeButton({
@@ -101,7 +105,7 @@ function NeedHelpNowPage() {
           </p>
           <nav
             aria-label="Help categories"
-            className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7"
+            className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
           >
             {jumpLinks.map(({ id, label, icon: Icon }) => (
               <a
@@ -331,6 +335,73 @@ function NeedHelpNowPage() {
             will help determine your next steps.
           </p>
           <CallHopeButton className="mt-6">I Need Document Help</CallHopeButton>
+        </div>
+      </section>
+
+      {/* COUNSELING / RECOVERY */}
+      <section
+        id="counseling"
+        tabIndex={-1}
+        className="scroll-mt-24 bg-cream/60 py-14 sm:scroll-mt-28 sm:py-16"
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-dark">
+            I Need Counseling or Recovery Support
+          </p>
+          <h2 className="mt-2 font-display text-3xl font-semibold text-navy">
+            Counseling &amp; recovery
+          </h2>
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">
+            If you are struggling with mental health, addiction, grief, or just
+            need someone to talk with, H.O.P.E. can help connect you with
+            counseling and recovery resources in Hampton Roads.
+          </p>
+          <ul className="mt-4 max-w-xl list-disc space-y-1 pl-5 text-navy">
+            <li>Referrals for counseling and behavioral health</li>
+            <li>Recovery and substance-use support connections</li>
+            <li>Crisis navigation and next-step guidance</li>
+          </ul>
+          <p className="mt-4 text-sm text-muted">
+            For a mental health or substance-use crisis, call or text{" "}
+            <a href="tel:988" className="font-semibold text-gold-dark">
+              988
+            </a>
+            . For life-threatening emergencies, call{" "}
+            <a href="tel:911" className="font-semibold text-gold-dark">
+              911
+            </a>
+            .
+          </p>
+          <CallHopeButton className="mt-6">
+            Get Counseling / Recovery Help
+          </CallHopeButton>
+        </div>
+      </section>
+
+      {/* CLOTHING / HYGIENE / SUPPLIES */}
+      <section
+        id="supplies"
+        tabIndex={-1}
+        className="scroll-mt-24 py-14 sm:scroll-mt-28 sm:py-16"
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-dark">
+            I Need Clothing, Hygiene, or Supplies
+          </p>
+          <h2 className="mt-2 font-display text-3xl font-semibold text-navy">
+            Clothing, hygiene &amp; supplies
+          </h2>
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">
+            Everyday essentials matter. Call H.O.P.E. if you need clothing,
+            hygiene items, or basic supplies — we will help connect you with
+            available resources and partner programs.
+          </p>
+          <ul className="mt-4 max-w-xl list-disc space-y-1 pl-5 text-navy">
+            <li>Clothing and seasonal wear</li>
+            <li>Hygiene and personal care items</li>
+            <li>Basic supplies for daily living</li>
+          </ul>
+          <CallHopeButton className="mt-6">I Need Supplies</CallHopeButton>
         </div>
       </section>
 

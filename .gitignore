@@ -31,3 +31,9 @@ Thumbs.db
 # Runtime event image uploads (keep directory via .gitkeep)
 public/uploads/events/*
 !public/uploads/events/.gitkeep
+
+# local planning / client request compilations (do not commit)
+HOPE-WEBSITE-REQUESTS.md
+
+# mockup duplicates at repo root (canonical copy lives in provided files/)
+/Hope_new_direction.jpeg

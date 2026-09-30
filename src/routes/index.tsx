@@ -6,6 +6,7 @@ import {
   Heart,
   HeartHandshake,
   HandHeart,
+  Phone,
   ShoppingBag,
   Users,
 } from "lucide-react";
@@ -119,6 +120,23 @@ function HomePage() {
               </span>
             </p>
 
+            {/* Prominent guest CTA — hard to miss on mobile */}
+            <div className="mt-5 sm:mt-6">
+              <Button
+                asChild
+                variant="gold"
+                size="xl"
+                className="h-14 w-full max-w-md gap-2 rounded-xl px-6 text-base font-bold uppercase tracking-[0.06em] shadow-[var(--shadow-gold)] sm:w-auto sm:text-lg"
+              >
+                <Link to="/need-help-now">
+                  <Phone className="size-5" aria-hidden />
+                  Get Help Now
+                </Link>
+              </Button>
+              <p className="mt-2 text-xs font-medium text-navy/70 sm:text-sm">
+                Hungry, homeless, or need documents? Start here.
+              </p>
+            </div>
           </div>
 
           {/* CTAs sit below the copy column so a single compact row has room to fit */}

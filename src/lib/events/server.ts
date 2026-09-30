@@ -35,6 +35,19 @@ export const listEvents = createServerFn({ method: "GET" })
     return listEventsImpl(data);
   });
 
+
+const monthSchema = z.object({
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+});
+
+/** Published occurrences whose start falls in that America/New_York month. */
+export const listCalendarMonth = createServerFn({ method: "GET" })
+  .validator((raw: unknown) => monthSchema.parse(raw))
+  .handler(async ({ data }) => {
+    const { listCalendarMonthImpl } = await import("./events.server");
+    return listCalendarMonthImpl(data.month);
+  });
+
 const eventIdSchema = z.object({ id: z.string().min(1).max(128) });
 
 export const getEvent = createServerFn({ method: "GET" })
@@ -74,6 +87,10 @@ const mutateSchema = z.object({
     .max(500)
     .nullable()
     .optional(),
+  recurrenceFreq: z.enum(["weekly", "monthly"]).nullable().optional(),
+  recurrenceInterval: z.number().int().min(1).max(52).optional(),
+  recurrenceUntil: z.string().datetime({ offset: true }).nullable().optional(),
+  recurrenceCount: z.number().int().min(1).max(500).nullable().optional(),
 });
 
 export const createEvent = createServerFn({ method: "POST" })

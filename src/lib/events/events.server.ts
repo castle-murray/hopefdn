@@ -8,6 +8,13 @@ import {
   requireStaff,
 } from "@/lib/auth/staff.server";
 import { getSessionUser } from "@/lib/auth/verify.server";
+import {
+  currentEtMonth,
+  monthBounds,
+  nextOccurrenceOnOrAfter,
+  occurrenceInstants,
+  type RecurrenceFields,
+} from "./recurrence";
 import type { CalendarEvent, EventListResult, EventStatus } from "./types";
 
 const MAX_LIMIT = 100;
@@ -26,6 +33,10 @@ type EventRow = {
   starts_at: string | Date;
   ends_at: string | Date | null;
   status: EventStatus;
+  recurrence_freq: "weekly" | "monthly" | null;
+  recurrence_interval: number | null;
+  recurrence_until: string | Date | null;
+  recurrence_count: number | null;
 };
 
 function toIso(value: string | Date | null | undefined): string | null {
@@ -50,11 +61,25 @@ function mapRow(row: EventRow): CalendarEvent {
     startsAt: toIso(row.starts_at) as string,
     endsAt: toIso(row.ends_at),
     status: row.status,
+    recurrenceFreq: row.recurrence_freq ?? null,
+    recurrenceInterval: row.recurrence_interval ?? 1,
+    recurrenceUntil: toIso(row.recurrence_until),
+    recurrenceCount: row.recurrence_count ?? null,
+  };
+}
+
+function ruleOf(event: CalendarEvent): RecurrenceFields {
+  return {
+    freq: event.recurrenceFreq,
+    interval: event.recurrenceInterval || 1,
+    until: event.recurrenceUntil,
+    count: event.recurrenceCount,
   };
 }
 
 const EVENT_SELECT = `id, slug, title, description, location, cta_label, cta_url,
-             image_url, banner_url, starts_at, ends_at, status`;
+             image_url, banner_url, starts_at, ends_at, status,
+             recurrence_freq, recurrence_interval, recurrence_until, recurrence_count`;
 
 function clampLimit(limit?: number): number {
   if (limit == null || !Number.isFinite(limit)) return DEFAULT_LIMIT;
@@ -230,7 +255,29 @@ export type MutateEventInput = {
   slug?: string;
   imageUrl?: string | null;
   bannerUrl?: string | null;
+  recurrenceFreq?: "weekly" | "monthly" | null;
+  recurrenceInterval?: number;
+  recurrenceUntil?: string | null;
+  recurrenceCount?: number | null;
 };
+
+function normalizeRecurrence(data: MutateEventInput): RecurrenceFields {
+  const freq = data.recurrenceFreq ?? null;
+  if (!freq) return { freq: null, interval: 1, until: null, count: null };
+  const interval = data.recurrenceInterval ?? 1;
+  if (interval < 1 || interval > 52) {
+    throw new Error("Repeat interval must be between 1 and 52");
+  }
+  const until = data.recurrenceUntil ?? null;
+  const count = data.recurrenceCount ?? null;
+  if (!until && count == null) {
+    throw new Error("A repeating event needs an end date or a count");
+  }
+  if (count != null && (count < 1 || count > 500)) {
+    throw new Error("Repeat count must be between 1 and 500");
+  }
+  return { freq, interval, until, count };
+}
 
 export type UpdateEventInput = MutateEventInput & { id: string };
 
@@ -264,13 +311,16 @@ export async function createEventImpl(
   const id = crypto.randomUUID();
   const slug = await uniqueSlug(data.slug ?? slugify(data.title));
 
+  const recurrence = normalizeRecurrence(data);
   const rows = await sql.query<EventRow>(
     `insert into events (
          id, slug, title, description, location, cta_label, cta_url, image_url, banner_url,
-         starts_at, ends_at, status, created_by, updated_by
+         starts_at, ends_at, status, created_by, updated_by,
+         recurrence_freq, recurrence_interval, recurrence_until, recurrence_count
        ) values (
          $1, $2, $3, $4, $5, $6, $7, $8, $9,
-         $10::timestamptz, $11::timestamptz, $12, $13, $13
+         $10::timestamptz, $11::timestamptz, $12, $13, $13,
+         $14, $15, $16::timestamptz, $17
        )
        returning ${EVENT_SELECT}`,
     [
@@ -287,6 +337,10 @@ export async function createEventImpl(
       data.endsAt ?? null,
       data.status,
       userId,
+      recurrence.freq,
+      recurrence.interval,
+      recurrence.until,
+      recurrence.count,
     ],
   );
   return mapRow(rows[0]!);
@@ -333,6 +387,7 @@ export async function updateEventImpl(
     nextBannerUrl = asserted;
   }
 
+  const recurrence = normalizeRecurrence(data);
   const rows = await sql.query<EventRow>(
     `update events set
          slug = $2,
@@ -347,7 +402,11 @@ export async function updateEventImpl(
          ends_at = $11::timestamptz,
          status = $12,
          updated_by = $13,
-         updated_at = now()
+         updated_at = now(),
+         recurrence_freq = $14,
+         recurrence_interval = $15,
+         recurrence_until = $16::timestamptz,
+         recurrence_count = $17
        where id = $1
        returning ${EVENT_SELECT}`,
     [
@@ -364,6 +423,10 @@ export async function updateEventImpl(
       data.endsAt ?? null,
       data.status,
       userId,
+      recurrence.freq,
+      recurrence.interval,
+      recurrence.until,
+      recurrence.count,
     ],
   );
 
@@ -423,18 +486,95 @@ export async function uploadEventImageImpl(
  */
 export async function fetchNextUpcomingPublishedEvent(): Promise<CalendarEvent | null> {
   const sql = await getSql();
+  const now = new Date();
   const rows = await sql.query<EventRow>(
     `select ${EVENT_SELECT}
      from events
      where status = 'published'
-       and starts_at >= $1::timestamptz
+       and (
+         starts_at >= $1::timestamptz
+         or (
+           recurrence_freq is not null
+           and (recurrence_until is null or recurrence_until >= $1::timestamptz)
+         )
+       )
      order by starts_at asc, id asc
-     limit 1`,
-    [new Date().toISOString()],
+     limit 200`,
+    [now.toISOString()],
   );
-  const row = rows[0];
-  return row ? mapRow(row) : null;
+  let best: { at: Date; event: CalendarEvent } | null = null;
+  for (const row of rows) {
+    const event = mapRow(row);
+    const at = nextOccurrenceOnOrAfter(event.startsAt, ruleOf(event), now);
+    if (!at) continue;
+    if (!best || at < best.at) best = { at, event };
+  }
+  return best?.event ?? null;
 }
+
+export type CalendarOccurrence = CalendarEvent & {
+  occurrenceStartsAt: string;
+  occurrenceEndsAt: string | null;
+};
+
+export async function listCalendarMonthImpl(month: string): Promise<{
+  month: string;
+  occurrences: CalendarOccurrence[];
+}> {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    throw new Error("Invalid month");
+  }
+  const { from, to } = monthBounds(month);
+  const sql = await getSql();
+  const rows = await sql.query<EventRow>(
+    `select ${EVENT_SELECT}
+     from events
+     where status = 'published'
+       and (
+         (
+           recurrence_freq is null
+           and starts_at >= $1::timestamptz
+           and starts_at < $2::timestamptz
+         )
+         or (
+           recurrence_freq is not null
+           and starts_at < $2::timestamptz
+           and (recurrence_until is null or recurrence_until >= $1::timestamptz)
+         )
+       )
+     order by starts_at asc, id asc
+     limit 500`,
+    [from.toISOString(), to.toISOString()],
+  );
+  const occurrences: CalendarOccurrence[] = [];
+  for (const row of rows) {
+    const event = mapRow(row);
+    const duration =
+      event.endsAt == null
+        ? null
+        : new Date(event.endsAt).getTime() - new Date(event.startsAt).getTime();
+    for (const start of occurrenceInstants(event.startsAt, ruleOf(event), from, to)) {
+      occurrences.push({
+        ...event,
+        occurrenceStartsAt: start.toISOString(),
+        occurrenceEndsAt:
+          duration == null ? null : new Date(start.getTime() + duration).toISOString(),
+      });
+    }
+  }
+  occurrences.sort((a, b) =>
+    a.occurrenceStartsAt < b.occurrenceStartsAt
+      ? -1
+      : a.occurrenceStartsAt > b.occurrenceStartsAt
+        ? 1
+        : a.id < b.id
+          ? -1
+          : 1,
+  );
+  return { month, occurrences };
+}
+
+export { currentEtMonth };
 
 /** Whether the current session can manage the calendar (staff or admin role). */
 export async function canManageEventsImpl(): Promise<boolean> {

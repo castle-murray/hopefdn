@@ -15,6 +15,7 @@ import {
   uploadEventImage,
 } from "@/lib/events/server";
 import { canManageUsers } from "@/lib/auth/users";
+import { endOfEtDay, etDateKey, recurrenceLabel } from "@/lib/events/recurrence";
 import type { CalendarEvent, EventStatus } from "@/lib/events/types";
 import {
   formatEventDate,
@@ -59,6 +60,11 @@ type FormState = {
   ctaUrl: string;
   startsAtLocal: string;
   endsAtLocal: string;
+  repeat: "none" | "weekly" | "monthly";
+  repeatInterval: string;
+  repeatEnd: "until" | "count";
+  repeatUntil: string;
+  repeatCount: string;
   status: EventStatus;
   /** Existing flyer path, if any. */
   imageUrl: string | null;
@@ -82,6 +88,11 @@ const emptyForm = (): FormState => ({
   ctaUrl: "",
   startsAtLocal: "",
   endsAtLocal: "",
+  repeat: "none",
+  repeatInterval: "1",
+  repeatEnd: "until",
+  repeatUntil: "",
+  repeatCount: "8",
   status: "published",
   imageUrl: null,
   imageFile: null,
@@ -116,6 +127,11 @@ function eventToForm(event: CalendarEvent): FormState {
     ctaUrl: event.ctaUrl ?? "",
     startsAtLocal: toLocalInput(event.startsAt),
     endsAtLocal: toLocalInput(event.endsAt),
+    repeat: event.recurrenceFreq ?? "none",
+    repeatInterval: String(event.recurrenceInterval || 1),
+    repeatEnd: event.recurrenceCount != null && !event.recurrenceUntil ? "count" : "until",
+    repeatUntil: event.recurrenceUntil ? etDateKey(event.recurrenceUntil) : "",
+    repeatCount: event.recurrenceCount != null ? String(event.recurrenceCount) : "8",
     status: event.status,
     imageUrl: event.imageUrl,
     imageFile: null,
@@ -249,6 +265,17 @@ function ManageEventsPage() {
         startsAt: fromLocalInput(form.startsAtLocal),
         endsAt: form.endsAtLocal ? fromLocalInput(form.endsAtLocal) : null,
         status: form.status,
+        recurrenceFreq: form.repeat === "none" ? null : form.repeat,
+        recurrenceInterval:
+          form.repeat === "none" ? 1 : Math.max(1, Number(form.repeatInterval) || 1),
+        recurrenceUntil:
+          form.repeat !== "none" && form.repeatEnd === "until" && form.repeatUntil
+            ? endOfEtDay(form.repeatUntil)
+            : null,
+        recurrenceCount:
+          form.repeat !== "none" && form.repeatEnd === "count"
+            ? Math.max(1, Number(form.repeatCount) || 1)
+            : null,
         ...(imageUrl !== undefined ? { imageUrl } : {}),
         ...(bannerUrl !== undefined ? { bannerUrl } : {}),
       };
@@ -495,6 +522,83 @@ function ManageEventsPage() {
                 </Field>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Repeats">
+                  <select
+                    className={inputClass}
+                    value={form.repeat}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        repeat: e.target.value as FormState["repeat"],
+                      }))
+                    }
+                  >
+                    <option value="none">Does not repeat</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </Field>
+                <Field label="Every">
+                  <input
+                    type="number"
+                    min={1}
+                    max={52}
+                    className={inputClass}
+                    value={form.repeatInterval}
+                    disabled={form.repeat === "none"}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, repeatInterval: e.target.value }))
+                    }
+                  />
+                </Field>
+              </div>
+              {form.repeat !== "none" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Ends">
+                    <select
+                      className={inputClass}
+                      value={form.repeatEnd}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          repeatEnd: e.target.value as FormState["repeatEnd"],
+                        }))
+                      }
+                    >
+                      <option value="until">On a date</option>
+                      <option value="count">After a number of times</option>
+                    </select>
+                  </Field>
+                  {form.repeatEnd === "until" ? (
+                    <Field label="Last date" required>
+                      <input
+                        type="date"
+                        className={inputClass}
+                        value={form.repeatUntil}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, repeatUntil: e.target.value }))
+                        }
+                        required
+                      />
+                    </Field>
+                  ) : (
+                    <Field label="Number of times" required>
+                      <input
+                        type="number"
+                        min={1}
+                        max={500}
+                        className={inputClass}
+                        value={form.repeatCount}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, repeatCount: e.target.value }))
+                        }
+                        required
+                      />
+                    </Field>
+                  )}
+                </div>
+              ) : null}
+              <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="CTA label">
                   <input
                     className={inputClass}
@@ -571,6 +675,19 @@ function ManageEventsPage() {
                     <p className="mt-1 text-sm text-muted">
                       {formatEventDate(event.startsAt)} · {formatEventTimeRange(event)}
                       {event.location ? ` · ${event.location}` : ""}
+                      {recurrenceLabel({
+                        freq: event.recurrenceFreq,
+                        interval: event.recurrenceInterval,
+                        until: event.recurrenceUntil,
+                        count: event.recurrenceCount,
+                      })
+                        ? ` · ${recurrenceLabel({
+                            freq: event.recurrenceFreq,
+                            interval: event.recurrenceInterval,
+                            until: event.recurrenceUntil,
+                            count: event.recurrenceCount,
+                          })}`
+                        : ""}
                     </p>
                   </div>
                 </div>

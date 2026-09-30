@@ -24,6 +24,10 @@ type EventRow = {
   starts_at: string | Date;
   ends_at: string | Date | null;
   status: EventStatus;
+  recurrence_freq: "weekly" | "monthly" | null;
+  recurrence_interval: number | null;
+  recurrence_until: string | Date | null;
+  recurrence_count: number | null;
 };
 
 function toIso(value: string | Date | null | undefined): string | null {
@@ -47,11 +51,16 @@ function mapRow(row: EventRow): CalendarEvent {
     startsAt: toIso(row.starts_at) as string,
     endsAt: toIso(row.ends_at),
     status: row.status,
+    recurrenceFreq: row.recurrence_freq ?? null,
+    recurrenceInterval: row.recurrence_interval ?? 1,
+    recurrenceUntil: toIso(row.recurrence_until),
+    recurrenceCount: row.recurrence_count ?? null,
   };
 }
 
 const EVENT_SELECT = `id, slug, title, description, location, cta_label, cta_url,
-             image_url, banner_url, starts_at, ends_at, status`;
+             image_url, banner_url, starts_at, ends_at, status,
+             recurrence_freq, recurrence_interval, recurrence_until, recurrence_count`;
 
 function clampLimit(limit?: number): number {
   if (limit == null || !Number.isFinite(limit)) return DEFAULT_LIMIT;

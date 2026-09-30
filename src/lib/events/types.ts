@@ -19,6 +19,14 @@ export type CalendarEvent = {
   startsAt: string;
   endsAt: string | null;
   status: EventStatus;
+  /** weekly or monthly. Null is a one-off. */
+  recurrenceFreq: "weekly" | "monthly" | null;
+  /** Step between occurrences. 1 for one-offs. */
+  recurrenceInterval: number;
+  /** Last occurrence may start through this instant. Null if unused. */
+  recurrenceUntil: string | null;
+  /** Includes the first occurrence. Null if unused. */
+  recurrenceCount: number | null;
 };
 
 export type EventListResult = {

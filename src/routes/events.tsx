@@ -15,6 +15,7 @@ import {
   daysInEtMonth,
   etDateKey,
   etWeekdayIndex,
+  nextOpenOccurrence,
   zonedDateTime,
 } from "@/lib/events/recurrence";
 import {
@@ -52,6 +53,21 @@ function shiftMonth(month: string, delta: number): string {
   const year2 = year! + Math.floor(index / 12);
   const month0 = ((index % 12) + 12) % 12;
   return `${year2}-${String(month0 + 1).padStart(2, "0")}`;
+}
+
+function majorEventDayKey(event: CalendarEvent): string {
+  const open = nextOpenOccurrence(
+    event.startsAt,
+    {
+      freq: event.recurrenceFreq,
+      interval: event.recurrenceInterval || 1,
+      until: event.recurrenceUntil,
+      count: event.recurrenceCount,
+    },
+    event.endsAt,
+    new Date(),
+  );
+  return etDateKey((open ?? new Date(event.startsAt)).toISOString());
 }
 
 function monthTitle(month: string): string {
@@ -111,6 +127,27 @@ function EventsPage() {
   const selectedItems = selected ? (byDay.get(selected) ?? []) : [];
   const todayKey = etDateKey(new Date().toISOString());
 
+  async function showMajorOnCalendar() {
+    if (!majorEvent || busy) return;
+    const dayKey = majorEventDayKey(majorEvent);
+    const targetMonth = dayKey.slice(0, 7);
+    if (targetMonth === month) {
+      setSelected(dayKey);
+      setDetailsScroll((n) => n + 1);
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await listCalendarMonth({ data: { month: targetMonth } });
+      setMonth(result.month);
+      setOccurrences(result.occurrences);
+      setSelected(dayKey);
+      setDetailsScroll((n) => n + 1);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function go(delta: number) {
     const next = shiftMonth(month, delta);
     setBusy(true);
@@ -135,17 +172,26 @@ function EventsPage() {
 
       <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {heroUrl ? (
+          {heroUrl && majorEvent ? (
             <div className="mb-10 overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
-              <img
-                src={heroUrl}
-                alt={`${majorEvent?.title ?? "Upcoming event"} — event banner`}
-                width={1400}
-                height={600}
-                className="aspect-[21/9] w-full object-cover object-center"
-                fetchPriority="high"
-                decoding="async"
-              />
+              <button
+                type="button"
+                className="block w-full cursor-pointer text-left disabled:cursor-wait"
+                disabled={busy}
+                aria-controls="event-day-details"
+                aria-label={`Show ${majorEvent.title} on the calendar`}
+                onClick={() => void showMajorOnCalendar()}
+              >
+                <img
+                  src={heroUrl}
+                  alt=""
+                  width={1400}
+                  height={600}
+                  className="aspect-[21/9] w-full object-cover object-center"
+                  fetchPriority="high"
+                  decoding="async"
+                />
+              </button>
             </div>
           ) : null}
 

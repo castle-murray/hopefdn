@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Settings2 } from "lucide-react";
 import { EventFlyerThumb } from "@/components/event-flyer-lightbox";
@@ -73,6 +73,13 @@ function EventsPage() {
     return today.startsWith(loaded.calendar.month) ? today : null;
   });
   const [busy, setBusy] = useState(false);
+  const detailsRef = useRef<HTMLDivElement>(null);
+  const [detailsScroll, setDetailsScroll] = useState(0);
+
+  useEffect(() => {
+    if (detailsScroll === 0) return;
+    detailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [detailsScroll]);
 
   const heroUrl = majorEvent?.bannerUrl || null;
 
@@ -185,7 +192,11 @@ function EventsPage() {
                   <button
                     key={cell.key}
                     type="button"
-                    onClick={() => setSelected(cell.key)}
+                    onClick={() => {
+                      setSelected(cell.key);
+                      setDetailsScroll((n) => n + 1);
+                    }}
+                    aria-controls="event-day-details"
                     className={`flex min-h-16 flex-col rounded-lg border p-1 text-left sm:min-h-24 sm:p-2 ${
                       active ? "border-gold bg-cream" : "border-border bg-background hover:border-gold"
                     }`}
@@ -211,7 +222,7 @@ function EventsPage() {
             </div>
           </div>
 
-          <div className="mt-8">
+          <div ref={detailsRef} id="event-day-details" className="mt-8 scroll-mt-24">
             {!selected ? (
               <p className="text-sm text-muted">Choose a day to see that day’s events.</p>
             ) : selectedItems.length === 0 ? (

@@ -237,35 +237,25 @@ function HomePage() {
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-dark">
-              Who We Are
+              Our Mission
             </p>
             <h2 className="mt-3 font-display text-3xl font-semibold text-navy text-balance sm:text-4xl">
-              Building Legacy Through Compassion, Dignity &amp; Community.
+              Real People.
+              <br />
+              Real help. Real Hope.
             </h2>
             <p className="mt-5 text-base leading-relaxed text-muted">
-              The H.O.P.E. Foundation exists to serve the underrepresented
-              homeless population — our cherished guests. Operating under
-              biblical principles, we provide shelter, meals, and essential
-              services to the disadvantaged and homeless population of Hampton
-              Roads. We are a 501(c)(3) nonprofit grounded in Christian love.
+              H.O.P.E. exists to serve individuals and families experiencing
+              homelessness and hardship with dignity, compassion, and practical
+              support — and to walk alongside them toward stability and a
+              brighter future.
             </p>
-            <p className="mt-5 font-display text-lg italic leading-relaxed text-navy sm:text-xl">
-              &ldquo;When we focus on His goodness, His power, and His grace, we
-              begin to change. We begin to be more like Jesus.{" "}
-              <span className="font-semibold not-italic text-gold-dark">
-                Inspiring Hope.
-              </span>
-              &rdquo;
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8">
               <Button asChild variant="default" size="lg">
                 <Link to="/about">
-                  About the Foundation
+                  Learn more about H.O.P.E
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
-                <Link to="/impact">See Our Programs</Link>
               </Button>
             </div>
           </div>

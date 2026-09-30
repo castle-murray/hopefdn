@@ -9,6 +9,10 @@ export type CalendarEvent = {
   location: string;
   ctaLabel: string;
   ctaUrl: string | null;
+  /** Public http(s) ticket link, or null when unset. */
+  ticketUrl: string | null;
+  /** When true, this event can supply the public calendar banner. */
+  majorEvent: boolean;
   /** Flyer/card public path e.g. `/uploads/events/….webp`, or null when unset. */
   imageUrl: string | null;
   /**
@@ -19,6 +23,14 @@ export type CalendarEvent = {
   startsAt: string;
   endsAt: string | null;
   status: EventStatus;
+  /** weekly or monthly. Null is a one-off. */
+  recurrenceFreq: "weekly" | "monthly" | null;
+  /** Step between occurrences. 1 for one-offs. */
+  recurrenceInterval: number;
+  /** Last occurrence may start through this instant. Null if unused. */
+  recurrenceUntil: string | null;
+  /** Includes the first occurrence. Null if unused. */
+  recurrenceCount: number | null;
 };
 
 export type EventListResult = {

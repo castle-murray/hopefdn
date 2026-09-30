@@ -15,6 +15,7 @@ import {
   uploadEventImage,
 } from "@/lib/events/server";
 import { canManageUsers } from "@/lib/auth/users";
+import { endOfEtDay, etDateKey, recurrenceLabel } from "@/lib/events/recurrence";
 import type { CalendarEvent, EventStatus } from "@/lib/events/types";
 import {
   formatEventDate,
@@ -57,8 +58,15 @@ type FormState = {
   location: string;
   ctaLabel: string;
   ctaUrl: string;
+  ticketUrl: string;
+  majorEvent: boolean;
   startsAtLocal: string;
   endsAtLocal: string;
+  repeat: "none" | "weekly" | "monthly";
+  repeatInterval: string;
+  repeatEnd: "until" | "count" | "indefinite";
+  repeatUntil: string;
+  repeatCount: string;
   status: EventStatus;
   /** Existing flyer path, if any. */
   imageUrl: string | null;
@@ -80,8 +88,15 @@ const emptyForm = (): FormState => ({
   location: "",
   ctaLabel: "Learn More",
   ctaUrl: "",
+  ticketUrl: "",
+  majorEvent: false,
   startsAtLocal: "",
   endsAtLocal: "",
+  repeat: "none",
+  repeatInterval: "1",
+  repeatEnd: "until",
+  repeatUntil: "",
+  repeatCount: "8",
   status: "published",
   imageUrl: null,
   imageFile: null,
@@ -114,8 +129,20 @@ function eventToForm(event: CalendarEvent): FormState {
     location: event.location,
     ctaLabel: event.ctaLabel,
     ctaUrl: event.ctaUrl ?? "",
+    ticketUrl: event.ticketUrl ?? "",
+    majorEvent: event.majorEvent,
     startsAtLocal: toLocalInput(event.startsAt),
     endsAtLocal: toLocalInput(event.endsAt),
+    repeat: event.recurrenceFreq ?? "none",
+    repeatInterval: String(event.recurrenceInterval || 1),
+    repeatEnd:
+      event.recurrenceCount != null && !event.recurrenceUntil
+        ? "count"
+        : event.recurrenceFreq && !event.recurrenceUntil && event.recurrenceCount == null
+          ? "indefinite"
+          : "until",
+    repeatUntil: event.recurrenceUntil ? etDateKey(event.recurrenceUntil) : "",
+    repeatCount: event.recurrenceCount != null ? String(event.recurrenceCount) : "8",
     status: event.status,
     imageUrl: event.imageUrl,
     imageFile: null,
@@ -246,9 +273,22 @@ function ManageEventsPage() {
         location: form.location,
         ctaLabel: form.ctaLabel || "Learn More",
         ctaUrl: form.ctaUrl.trim() ? form.ctaUrl.trim() : null,
+        ticketUrl: form.ticketUrl.trim() ? form.ticketUrl.trim() : null,
+        majorEvent: form.majorEvent,
         startsAt: fromLocalInput(form.startsAtLocal),
         endsAt: form.endsAtLocal ? fromLocalInput(form.endsAtLocal) : null,
         status: form.status,
+        recurrenceFreq: form.repeat === "none" ? null : form.repeat,
+        recurrenceInterval:
+          form.repeat === "none" ? 1 : Math.max(1, Number(form.repeatInterval) || 1),
+        recurrenceUntil:
+          form.repeat !== "none" && form.repeatEnd === "until" && form.repeatUntil
+            ? endOfEtDay(form.repeatUntil)
+            : null,
+        recurrenceCount:
+          form.repeat !== "none" && form.repeatEnd === "count"
+            ? Math.max(1, Number(form.repeatCount) || 1)
+            : null,
         ...(imageUrl !== undefined ? { imageUrl } : {}),
         ...(bannerUrl !== undefined ? { bannerUrl } : {}),
       };
@@ -495,6 +535,88 @@ function ManageEventsPage() {
                 </Field>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Repeats">
+                  <select
+                    className={inputClass}
+                    value={form.repeat}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        repeat: e.target.value as FormState["repeat"],
+                      }))
+                    }
+                  >
+                    <option value="none">Does not repeat</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </Field>
+                <Field label="Every">
+                  <input
+                    type="number"
+                    min={1}
+                    max={52}
+                    className={inputClass}
+                    value={form.repeatInterval}
+                    disabled={form.repeat === "none"}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, repeatInterval: e.target.value }))
+                    }
+                  />
+                </Field>
+              </div>
+              {form.repeat !== "none" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Ends">
+                    <select
+                      className={inputClass}
+                      value={form.repeatEnd}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          repeatEnd: e.target.value as FormState["repeatEnd"],
+                        }))
+                      }
+                    >
+                      <option value="until">On a date</option>
+                      <option value="count">After a number of times</option>
+                      <option value="indefinite">No end date</option>
+                    </select>
+                  </Field>
+                  {form.repeatEnd === "indefinite" ? (
+                    <p className="self-end text-sm text-muted">
+                      Repeats with no end date. The public calendar shows the next year.
+                    </p>
+                  ) : form.repeatEnd === "until" ? (
+                    <Field label="Last date" required>
+                      <input
+                        type="date"
+                        className={inputClass}
+                        value={form.repeatUntil}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, repeatUntil: e.target.value }))
+                        }
+                        required
+                      />
+                    </Field>
+                  ) : (
+                    <Field label="Number of times" required>
+                      <input
+                        type="number"
+                        min={1}
+                        max={500}
+                        className={inputClass}
+                        value={form.repeatCount}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, repeatCount: e.target.value }))
+                        }
+                        required
+                      />
+                    </Field>
+                  )}
+                </div>
+              ) : null}
+              <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="CTA label">
                   <input
                     className={inputClass}
@@ -513,6 +635,26 @@ function ManageEventsPage() {
                   />
                 </Field>
               </div>
+              <Field label="Ticket link (optional)">
+                <input
+                  type="url"
+                  className={inputClass}
+                  value={form.ticketUrl}
+                  onChange={(e) => setForm((f) => ({ ...f, ticketUrl: e.target.value }))}
+                  placeholder="https://"
+                  maxLength={2000}
+                />
+              </Field>
+              <label className="flex items-center gap-2 text-sm text-navy">
+                <input
+                  type="checkbox"
+                  checked={form.majorEvent}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, majorEvent: e.target.checked }))
+                  }
+                />
+                Major event (use this event&apos;s banner at the top of the public calendar when it is next)
+              </label>
               <Field label="Status">
                 <select
                   className={inputClass}
@@ -571,6 +713,16 @@ function ManageEventsPage() {
                     <p className="mt-1 text-sm text-muted">
                       {formatEventDate(event.startsAt)} · {formatEventTimeRange(event)}
                       {event.location ? ` · ${event.location}` : ""}
+                      {(() => {
+                        const label = recurrenceLabel({
+                          freq: event.recurrenceFreq,
+                          interval: event.recurrenceInterval,
+                          until: event.recurrenceUntil,
+                          count: event.recurrenceCount,
+                        });
+                        return label ? ` · ${label}` : "";
+                      })()}
+                      {event.majorEvent ? " · Major" : ""}
                     </p>
                   </div>
                 </div>

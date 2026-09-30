@@ -12,6 +12,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { authMiddleware } from "@/lib/auth/middleware";
+import { ticketUrlSchema } from "./ticket-url";
 import type { CalendarEvent, EventListResult } from "./types";
 
 const MAX_LIMIT = 100;
@@ -33,6 +34,19 @@ export const listEvents = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<EventListResult> => {
     const { listEventsImpl } = await import("./events.server");
     return listEventsImpl(data);
+  });
+
+
+const monthSchema = z.object({
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+});
+
+/** Published occurrences whose start falls in that America/New_York month. */
+export const listCalendarMonth = createServerFn({ method: "GET" })
+  .validator((raw: unknown) => monthSchema.parse(raw))
+  .handler(async ({ data }) => {
+    const { listCalendarMonthImpl } = await import("./events.server");
+    return listCalendarMonthImpl(data.month);
   });
 
 const eventIdSchema = z.object({ id: z.string().min(1).max(128) });
@@ -74,6 +88,12 @@ const mutateSchema = z.object({
     .max(500)
     .nullable()
     .optional(),
+  recurrenceFreq: z.enum(["weekly", "monthly"]).nullable().optional(),
+  recurrenceInterval: z.number().int().min(1).max(52).optional(),
+  recurrenceUntil: z.string().datetime({ offset: true }).nullable().optional(),
+  recurrenceCount: z.number().int().min(1).max(500).nullable().optional(),
+  ticketUrl: ticketUrlSchema,
+  majorEvent: z.boolean().optional(),
 });
 
 export const createEvent = createServerFn({ method: "POST" })
@@ -120,6 +140,14 @@ export const uploadEventImage = createServerFn({ method: "POST" })
     const { uploadEventImageImpl } = await import("./events.server");
     return uploadEventImageImpl(context.userId, data);
   });
+
+/** Soonest published major event that has not ended. Banner is bannerUrl only. */
+export const getNextUpcomingMajorEvent = createServerFn({ method: "GET" }).handler(
+  async (): Promise<CalendarEvent | null> => {
+    const { fetchNextUpcomingMajorEvent } = await import("./events.server");
+    return fetchNextUpcomingMajorEvent();
+  },
+);
 
 /** Soonest published event with startsAt >= now (public hero / homepage Events tile). */
 export const getNextUpcomingPublishedEvent = createServerFn({ method: "GET" }).handler(

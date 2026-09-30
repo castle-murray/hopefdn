@@ -8,6 +8,15 @@ import {
   requireStaff,
 } from "@/lib/auth/staff.server";
 import { getSessionUser } from "@/lib/auth/verify.server";
+import {
+  currentEtMonth,
+  monthBounds,
+  nextOccurrenceOnOrAfter,
+  nextOpenOccurrence,
+  occurrenceInstants,
+  type RecurrenceFields,
+} from "./recurrence";
+import { normalizeTicketUrl } from "./ticket-url";
 import type { CalendarEvent, EventListResult, EventStatus } from "./types";
 
 const MAX_LIMIT = 100;
@@ -21,11 +30,17 @@ type EventRow = {
   location: string;
   cta_label: string;
   cta_url: string | null;
+  ticket_url: string | null;
   image_url: string | null;
   banner_url: string | null;
   starts_at: string | Date;
   ends_at: string | Date | null;
   status: EventStatus;
+  recurrence_freq: "weekly" | "monthly" | null;
+  recurrence_interval: number | null;
+  recurrence_until: string | Date | null;
+  recurrence_count: number | null;
+  major_event: boolean;
 };
 
 function toIso(value: string | Date | null | undefined): string | null {
@@ -45,16 +60,33 @@ function mapRow(row: EventRow): CalendarEvent {
     location: row.location,
     ctaLabel: row.cta_label,
     ctaUrl: row.cta_url,
+    ticketUrl: row.ticket_url ?? null,
     imageUrl: row.image_url ?? null,
     bannerUrl: row.banner_url ?? null,
     startsAt: toIso(row.starts_at) as string,
     endsAt: toIso(row.ends_at),
     status: row.status,
+    recurrenceFreq: row.recurrence_freq ?? null,
+    recurrenceInterval: row.recurrence_interval ?? 1,
+    recurrenceUntil: toIso(row.recurrence_until),
+    recurrenceCount: row.recurrence_count ?? null,
+    majorEvent: row.major_event === true,
   };
 }
 
-const EVENT_SELECT = `id, slug, title, description, location, cta_label, cta_url,
-             image_url, banner_url, starts_at, ends_at, status`;
+function ruleOf(event: CalendarEvent): RecurrenceFields {
+  return {
+    freq: event.recurrenceFreq,
+    interval: event.recurrenceInterval || 1,
+    until: event.recurrenceUntil,
+    count: event.recurrenceCount,
+  };
+}
+
+const EVENT_SELECT = `id, slug, title, description, location, cta_label, cta_url, ticket_url,
+             image_url, banner_url, starts_at, ends_at, status,
+             recurrence_freq, recurrence_interval, recurrence_until, recurrence_count,
+             major_event`;
 
 function clampLimit(limit?: number): number {
   if (limit == null || !Number.isFinite(limit)) return DEFAULT_LIMIT;
@@ -230,7 +262,28 @@ export type MutateEventInput = {
   slug?: string;
   imageUrl?: string | null;
   bannerUrl?: string | null;
+  recurrenceFreq?: "weekly" | "monthly" | null;
+  recurrenceInterval?: number;
+  recurrenceUntil?: string | null;
+  recurrenceCount?: number | null;
+  ticketUrl?: string | null;
+  majorEvent?: boolean;
 };
+
+function normalizeRecurrence(data: MutateEventInput): RecurrenceFields {
+  const freq = data.recurrenceFreq ?? null;
+  if (!freq) return { freq: null, interval: 1, until: null, count: null };
+  const interval = data.recurrenceInterval ?? 1;
+  if (interval < 1 || interval > 52) {
+    throw new Error("Repeat interval must be between 1 and 52");
+  }
+  const until = data.recurrenceUntil ?? null;
+  const count = data.recurrenceCount ?? null;
+  if (count != null && (count < 1 || count > 500)) {
+    throw new Error("Repeat count must be between 1 and 500");
+  }
+  return { freq, interval, until, count };
+}
 
 export type UpdateEventInput = MutateEventInput & { id: string };
 
@@ -264,13 +317,17 @@ export async function createEventImpl(
   const id = crypto.randomUUID();
   const slug = await uniqueSlug(data.slug ?? slugify(data.title));
 
+  const recurrence = normalizeRecurrence(data);
   const rows = await sql.query<EventRow>(
     `insert into events (
          id, slug, title, description, location, cta_label, cta_url, image_url, banner_url,
-         starts_at, ends_at, status, created_by, updated_by
+         starts_at, ends_at, status, created_by, updated_by,
+         recurrence_freq, recurrence_interval, recurrence_until, recurrence_count,
+         ticket_url, major_event
        ) values (
          $1, $2, $3, $4, $5, $6, $7, $8, $9,
-         $10::timestamptz, $11::timestamptz, $12, $13, $13
+         $10::timestamptz, $11::timestamptz, $12, $13, $13,
+         $14, $15, $16::timestamptz, $17, $18, $19
        )
        returning ${EVENT_SELECT}`,
     [
@@ -287,6 +344,12 @@ export async function createEventImpl(
       data.endsAt ?? null,
       data.status,
       userId,
+      recurrence.freq,
+      recurrence.interval,
+      recurrence.until,
+      recurrence.count,
+      normalizeTicketUrl(data.ticketUrl) ?? null,
+      data.majorEvent === true,
     ],
   );
   return mapRow(rows[0]!);
@@ -333,6 +396,7 @@ export async function updateEventImpl(
     nextBannerUrl = asserted;
   }
 
+  const recurrence = normalizeRecurrence(data);
   const rows = await sql.query<EventRow>(
     `update events set
          slug = $2,
@@ -347,7 +411,13 @@ export async function updateEventImpl(
          ends_at = $11::timestamptz,
          status = $12,
          updated_by = $13,
-         updated_at = now()
+         updated_at = now(),
+         recurrence_freq = $14,
+         recurrence_interval = $15,
+         recurrence_until = $16::timestamptz,
+         recurrence_count = $17,
+         ticket_url = $18,
+         major_event = $19
        where id = $1
        returning ${EVENT_SELECT}`,
     [
@@ -364,6 +434,12 @@ export async function updateEventImpl(
       data.endsAt ?? null,
       data.status,
       userId,
+      recurrence.freq,
+      recurrence.interval,
+      recurrence.until,
+      recurrence.count,
+      normalizeTicketUrl(data.ticketUrl) ?? null,
+      data.majorEvent === true,
     ],
   );
 
@@ -421,20 +497,139 @@ export async function uploadEventImageImpl(
  * Soonest published event with startsAt >= now (public hero / homepage Events tile).
  * Server-only helper — call via getNextUpcomingPublishedEvent createServerFn from routes.
  */
+/**
+ * Soonest published major event whose occurrence has not ended.
+ * Banner callers must use this event's bannerUrl only.
+ */
+export async function fetchNextUpcomingMajorEvent(): Promise<CalendarEvent | null> {
+  const sql = await getSql();
+  const now = new Date();
+  const rows = await sql.query<EventRow>(
+    `select ${EVENT_SELECT}
+     from events
+     where status = 'published'
+       and major_event = true
+       and (
+         (
+           recurrence_freq is null
+           and coalesce(ends_at, starts_at) > $1::timestamptz
+         )
+         or (
+           recurrence_freq is not null
+           and (recurrence_until is null or recurrence_until >= $1::timestamptz - interval '366 days')
+         )
+       )
+     order by starts_at asc, id asc
+     limit 200`,
+    [now.toISOString()],
+  );
+  let best: { at: Date; event: CalendarEvent } | null = null;
+  for (const row of rows) {
+    const event = mapRow(row);
+    const at = nextOpenOccurrence(event.startsAt, ruleOf(event), event.endsAt, now);
+    if (!at) continue;
+    if (
+      !best ||
+      at < best.at ||
+      (at.getTime() === best.at.getTime() && event.id < best.event.id)
+    ) {
+      best = { at, event };
+    }
+  }
+  return best?.event ?? null;
+}
+
 export async function fetchNextUpcomingPublishedEvent(): Promise<CalendarEvent | null> {
+  const sql = await getSql();
+  const now = new Date();
+  const rows = await sql.query<EventRow>(
+    `select ${EVENT_SELECT}
+     from events
+     where status = 'published'
+       and (
+         starts_at >= $1::timestamptz
+         or (
+           recurrence_freq is not null
+           and (recurrence_until is null or recurrence_until >= $1::timestamptz)
+         )
+       )
+     order by starts_at asc, id asc
+     limit 200`,
+    [now.toISOString()],
+  );
+  let best: { at: Date; event: CalendarEvent } | null = null;
+  for (const row of rows) {
+    const event = mapRow(row);
+    const at = nextOccurrenceOnOrAfter(event.startsAt, ruleOf(event), now);
+    if (!at) continue;
+    if (!best || at < best.at) best = { at, event };
+  }
+  return best?.event ?? null;
+}
+
+export type CalendarOccurrence = CalendarEvent & {
+  occurrenceStartsAt: string;
+  occurrenceEndsAt: string | null;
+};
+
+export async function listCalendarMonthImpl(month: string): Promise<{
+  month: string;
+  occurrences: CalendarOccurrence[];
+}> {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    throw new Error("Invalid month");
+  }
+  const { from, to } = monthBounds(month);
   const sql = await getSql();
   const rows = await sql.query<EventRow>(
     `select ${EVENT_SELECT}
      from events
      where status = 'published'
-       and starts_at >= $1::timestamptz
+       and (
+         (
+           recurrence_freq is null
+           and starts_at >= $1::timestamptz
+           and starts_at < $2::timestamptz
+         )
+         or (
+           recurrence_freq is not null
+           and starts_at < $2::timestamptz
+           and (recurrence_until is null or recurrence_until >= $1::timestamptz)
+         )
+       )
      order by starts_at asc, id asc
-     limit 1`,
-    [new Date().toISOString()],
+     limit 500`,
+    [from.toISOString(), to.toISOString()],
   );
-  const row = rows[0];
-  return row ? mapRow(row) : null;
+  const occurrences: CalendarOccurrence[] = [];
+  for (const row of rows) {
+    const event = mapRow(row);
+    const duration =
+      event.endsAt == null
+        ? null
+        : new Date(event.endsAt).getTime() - new Date(event.startsAt).getTime();
+    for (const start of occurrenceInstants(event.startsAt, ruleOf(event), from, to)) {
+      occurrences.push({
+        ...event,
+        occurrenceStartsAt: start.toISOString(),
+        occurrenceEndsAt:
+          duration == null ? null : new Date(start.getTime() + duration).toISOString(),
+      });
+    }
+  }
+  occurrences.sort((a, b) =>
+    a.occurrenceStartsAt < b.occurrenceStartsAt
+      ? -1
+      : a.occurrenceStartsAt > b.occurrenceStartsAt
+        ? 1
+        : a.id < b.id
+          ? -1
+          : 1,
+  );
+  return { month, occurrences };
 }
+
+export { currentEtMonth };
 
 /** Whether the current session can manage the calendar (staff or admin role). */
 export async function canManageEventsImpl(): Promise<boolean> {

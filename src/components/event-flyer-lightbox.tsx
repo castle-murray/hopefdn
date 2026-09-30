@@ -78,7 +78,10 @@ function fitSize(
 }
 
 type EventFlyerThumbProps = {
+  /** Flyer opened in the lightbox. */
   src: string;
+  /** Wide image to show instead of the flyer. Lightbox still uses src. */
+  previewSrc?: string;
   title: string;
   className?: string;
   imgClassName?: string;
@@ -91,6 +94,7 @@ type EventFlyerThumbProps = {
  */
 export function EventFlyerThumb({
   src,
+  previewSrc,
   title,
   className,
   imgClassName,
@@ -109,7 +113,7 @@ export function EventFlyerThumb({
         aria-label={`View flyer: ${title}`}
       >
         <img
-          src={src}
+          src={previewSrc || src}
           alt=""
           className={
             imgClassName ??

@@ -229,7 +229,16 @@ function EventsPage() {
                       key={`${event.id}-${event.occurrenceStartsAt}`}
                       className="overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)]"
                     >
-                      {event.imageUrl ? (
+                      {event.bannerUrl ? (
+                        <img
+                          src={event.bannerUrl}
+                          alt=""
+                          className="aspect-[21/9] w-full object-cover object-center sm:aspect-[3/1]"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : null}
+                      {event.imageUrl && event.imageUrl !== event.bannerUrl ? (
                         <EventFlyerThumb src={event.imageUrl} title={event.title} />
                       ) : null}
                       <div className="grid gap-6 p-6 md:grid-cols-[1fr_auto] md:items-center md:p-8">

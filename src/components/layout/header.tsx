@@ -216,16 +216,14 @@ export function Header() {
                   Get Help Now
                 </Link>
 
-                <a
-                  href={site.donateUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  to="/donate"
                   className="inline-flex h-8 items-center gap-1.5 rounded-full gradient-gold px-3.5 text-xs font-bold uppercase tracking-wide text-navy-deep shadow-[var(--shadow-gold)] transition hover:brightness-105"
                   tabIndex={contactBarHidden ? -1 : undefined}
                 >
                   <Heart className="size-3.5 fill-current" aria-hidden />
                   Donate
-                </a>
+                </Link>
               </div>
             </div>
           </div>

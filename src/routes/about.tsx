@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { Button } from "@/components/ui/button";
+import { aboutArchiveImages, type ArchiveImage } from "@/data/about-archive-images";
 import { site } from "@/data/site";
 
 export const Route = createFileRoute("/about")({
@@ -229,6 +230,15 @@ function AboutPage() {
       <section className="py-16 sm:py-20">
         <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
           <div>
+            <img
+              src={aboutArchiveImages.logo.src}
+              alt={aboutArchiveImages.logo.alt}
+              width={aboutArchiveImages.logo.width}
+              height={aboutArchiveImages.logo.height}
+              className="mb-6 h-auto w-40 mix-blend-multiply sm:w-48"
+              decoding="async"
+              fetchPriority="high"
+            />
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-dark">
               Our Motto
             </p>
@@ -258,17 +268,15 @@ function AboutPage() {
             </div>
             <BulletList items={services} />
           </div>
-          <div className="overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
-            <img
-              src="/images/about-community-w800.webp"
-              srcSet="/images/about-community-w800.webp 800w, /images/about-community-w1200.webp 1200w"
+          <div className="space-y-6">
+            <StoryPhoto
+              image={aboutArchiveImages.motto}
               sizes="(max-width: 1024px) 100vw, 50vw"
-              alt="HOPE Foundation volunteers and community members together in the park"
-              width={1200}
-              height={800}
-              className="aspect-[4/3] h-full w-full object-cover object-center"
-              loading="lazy"
-              decoding="async"
+              eager
+            />
+            <StoryPhoto
+              image={aboutArchiveImages.servesHamptonRoads}
+              sizes="(max-width: 1024px) 100vw, 50vw"
             />
           </div>
         </div>
@@ -368,23 +376,45 @@ function AboutPage() {
 
       <section className="bg-cream/70 py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="font-display text-3xl font-semibold text-navy">
-            Year-Round Services
-          </h2>
-          <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted">
-            The H.O.P.E. Foundation is At The Forefront Of Prioritizing A Year-Round Dedication To Transforming The Lives Of The Unhoused Community In Hampton Roads And Beyond.
-          </p>
-          <h3 className="mt-8 font-display text-2xl font-semibold text-navy">
-            Our Approach
-          </h3>
-          <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted">
-            At The H.O.P.E Foundation, We Are Dedicated To Supporting Those in need in of H.O.P.E. in the community. We Are On Call 24/7, 365 Days A Year. Our Initiatives Are Powered By:
-          </p>
-          <BulletList items={approach} />
-          <h3 className="mt-8 font-display text-2xl font-semibold text-navy">
-            H.O.P.E. Meals on Wheels
-          </h3>
-          <BulletList items={yearRound} />
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
+            <div>
+            <h2 className="font-display text-3xl font-semibold text-navy">
+              Year-Round Services
+            </h2>
+            <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted">
+              The H.O.P.E. Foundation is At The Forefront Of Prioritizing A Year-Round Dedication To Transforming The Lives Of The Unhoused Community In Hampton Roads And Beyond.
+            </p>
+            <h3 className="mt-8 font-display text-2xl font-semibold text-navy">
+              Our Approach
+            </h3>
+            <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted">
+              At The H.O.P.E Foundation, We Are Dedicated To Supporting Those in need in of H.O.P.E. in the community. We Are On Call 24/7, 365 Days A Year. Our Initiatives Are Powered By:
+            </p>
+            <BulletList items={approach} />
+            <h3 className="mt-8 font-display text-2xl font-semibold text-navy">
+              H.O.P.E. Meals on Wheels
+            </h3>
+            <BulletList items={yearRound} />
+            </div>
+            <a
+              href={aboutArchiveImages.mealsOnWheelsFlyer.original}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mx-auto block w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)]"
+            >
+              <img
+                src={aboutArchiveImages.mealsOnWheelsFlyer.src}
+                srcSet={aboutArchiveImages.mealsOnWheelsFlyer.srcSet}
+                sizes="(max-width: 1024px) 24rem, 22rem"
+                alt={aboutArchiveImages.mealsOnWheelsFlyer.alt}
+                width={aboutArchiveImages.mealsOnWheelsFlyer.width}
+                height={aboutArchiveImages.mealsOnWheelsFlyer.height}
+                className="h-auto w-full"
+                loading="lazy"
+                decoding="async"
+              />
+            </a>
+          </div>
         </div>
       </section>
 
@@ -414,6 +444,7 @@ function AboutPage() {
           <div className="mt-6 grid gap-5 lg:grid-cols-3">
             <PersonCard
               name="Regina R. Darden"
+              photo={aboutArchiveImages.reginaDarden}
               role="CEO Director"
               email="Regina@hopefdn.org"
             >
@@ -428,6 +459,7 @@ function AboutPage() {
             </PersonCard>
             <PersonCard
               name="Sylvia Boone"
+              photo={aboutArchiveImages.sylviaBoone}
               role="Co-Director"
               email="Sylviaboone@hopefdn.org"
             >
@@ -437,6 +469,7 @@ function AboutPage() {
             </PersonCard>
             <PersonCard
               name="Stephanie Brown"
+              photo={aboutArchiveImages.stephanieBrown}
               role="Financial Director"
               email="Stephanie@hopefdn.org"
             >
@@ -452,6 +485,7 @@ function AboutPage() {
           <div className="mt-6 grid gap-5 lg:grid-cols-3">
             <PersonCard
               name="Karen Coronado"
+              photo={aboutArchiveImages.karenCoronado}
               role="Board Member"
               email="Karenc@hopefdn.org"
             >
@@ -461,6 +495,7 @@ function AboutPage() {
             </PersonCard>
             <PersonCard
               name="C. Richard Gillcrese"
+              photo={aboutArchiveImages.richardGillcrese}
               role="Board Member"
               email="Richard@hopefdn.org"
             >
@@ -479,6 +514,7 @@ function AboutPage() {
             </PersonCard>
             <PersonCard
               name="Kathy LaVerne Dozier"
+              photo={aboutArchiveImages.kathyDozier}
               role="Board Member"
               email="Kathy@hopefdn.org"
             >
@@ -520,6 +556,7 @@ function AboutPage() {
             </PersonCard>
             <PersonCard
               name="David Knickerbocker"
+              photo={aboutArchiveImages.davidKnickerbocker}
               role="Executive Advisor to Directors"
               email="David@hopefdn.org"
             >
@@ -537,25 +574,33 @@ function AboutPage() {
 
       <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="font-display text-3xl font-semibold text-navy">
-            Help End Homelessness Hampton Roads
-          </h2>
-          <Scripture
-            text="Let all your things be done with charity."
-            cite="1 Corinthians 16:14 (KJV)"
-          />
-          <div className="mt-6 max-w-3xl space-y-4 text-base leading-relaxed text-muted">
-            <p>
-              Our funding comes from donations, sponsors, fundraising events and grants.
-            </p>
-            <p>
-              In 2018-2019, we are able to provide shelter and warm food to the homeless in the Ocean View location with the help of The Lighthouse Community Church – 9609 9th Bay St., Norfolk, VA.
-            </p>
-            <p>
-              In 2020-2021, Due to Coronavirus/COVID-19 and Social Distancing H.O.P.E. Meals on Wheels was started, we provided the homeless in our community with:
-            </p>
+          <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
+            <div>
+            <h2 className="font-display text-3xl font-semibold text-navy">
+              Help End Homelessness Hampton Roads
+            </h2>
+            <Scripture
+              text="Let all your things be done with charity."
+              cite="1 Corinthians 16:14 (KJV)"
+            />
+            <div className="mt-6 max-w-3xl space-y-4 text-base leading-relaxed text-muted">
+              <p>
+                Our funding comes from donations, sponsors, fundraising events and grants.
+              </p>
+              <p>
+                In 2018-2019, we are able to provide shelter and warm food to the homeless in the Ocean View location with the help of The Lighthouse Community Church – 9609 9th Bay St., Norfolk, VA.
+              </p>
+              <p>
+                In 2020-2021, Due to Coronavirus/COVID-19 and Social Distancing H.O.P.E. Meals on Wheels was started, we provided the homeless in our community with:
+              </p>
+            </div>
+            <BulletList items={covidProvided} />
+            </div>
+            <StoryPhoto
+              image={aboutArchiveImages.wavyRemarkablePerson}
+              sizes="(max-width: 1024px) 100vw, 50vw"
+            />
           </div>
-          <BulletList items={covidProvided} />
         </div>
       </section>
 
@@ -654,6 +699,32 @@ function AboutPage() {
   );
 }
 
+function StoryPhoto({
+  image,
+  sizes,
+  eager,
+}: {
+  image: ArchiveImage;
+  sizes: string;
+  eager?: boolean;
+}) {
+  return (
+    <div className="overflow-hidden rounded-2xl shadow-[var(--shadow-elevated)]">
+      <img
+        src={image.src}
+        srcSet={image.srcSet}
+        sizes={sizes}
+        alt={image.alt}
+        width={image.width}
+        height={image.height}
+        className="aspect-[4/3] h-auto w-full object-cover object-center"
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+      />
+    </div>
+  );
+}
+
 function Scripture({ text, cite }: { text: string; cite: string }) {
   return (
     <blockquote className="mt-6 max-w-3xl rounded-2xl border border-border bg-surface-soft p-6">
@@ -684,15 +755,30 @@ function PersonCard({
   name,
   role,
   email,
+  photo,
   children,
 }: {
   name: string;
   role: string;
   email?: string;
+  photo?: ArchiveImage;
   children: ReactNode;
 }) {
   return (
     <article className="rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)]">
+      {photo ? (
+        <img
+          src={photo.src}
+          srcSet={photo.srcSet}
+          sizes="(max-width: 1024px) 12rem, 10rem"
+          alt={photo.alt}
+          width={photo.width}
+          height={photo.height}
+          className="mb-5 aspect-square w-40 rounded-xl object-cover object-top sm:w-48 lg:w-40"
+          loading="lazy"
+          decoding="async"
+        />
+      ) : null}
       <h4 className="font-display text-xl font-semibold text-navy">{name}</h4>
       <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-gold-dark">
         {role}

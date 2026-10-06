@@ -4,6 +4,13 @@ import { PageHero } from "@/components/page-hero";
 import { Button } from "@/components/ui/button";
 import { pledges, site } from "@/data/site";
 
+// Original hopefdn.org Google Form (stopgap). The "?embedded=true" variant
+// answers 401 with a Google sign-in wall for signed-out visitors, so the
+// iframe uses the plain viewform URL, which Google allows to be framed.
+const VOLUNTEER_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSf3X5JI-vQfjQB9yx2GEQ5A58h8KnHUKkqTRrP7emTMtIjd3w/viewform";
+const VOLUNTEER_FORM_EMBED_URL = VOLUNTEER_FORM_URL;
+
 export const Route = createFileRoute("/get-involved")({
   component: GetInvolvedPage,
   head: () => ({
@@ -88,6 +95,37 @@ function GetInvolvedPage() {
             <Button asChild variant="default" size="lg" className="mt-8">
               <a href={site.emailHref}>Email to Volunteer</a>
             </Button>
+          </div>
+        </div>
+
+        <div
+          id="volunteer-form"
+          className="mx-auto mt-14 max-w-3xl scroll-mt-28 px-4 sm:px-6 lg:px-0"
+        >
+          <h3 className="font-display text-2xl font-semibold text-navy sm:text-3xl">
+            Volunteer and Sponsor Interest Form
+          </h3>
+          <p className="mt-2 text-sm text-muted">
+            Trouble seeing the form below?{" "}
+            <a
+              href={VOLUNTEER_FORM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-gold-dark underline underline-offset-2 hover:text-navy"
+            >
+              Open the form
+            </a>{" "}
+            in a new tab.
+          </p>
+          <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)]">
+            <iframe
+              src={VOLUNTEER_FORM_EMBED_URL}
+              title="H.O.P.E. Foundation Volunteer and Sponsor Interest Form"
+              loading="lazy"
+              className="block h-[3250px] w-full border-0 sm:h-[2850px]"
+            >
+              Loading…
+            </iframe>
           </div>
         </div>
       </section>

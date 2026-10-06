@@ -102,7 +102,19 @@ function GetInvolvedPage() {
           id="volunteer-form"
           className="mx-auto mt-14 max-w-3xl scroll-mt-28 px-4 sm:px-6 lg:px-0"
         >
-          <h3 className="font-display text-2xl font-semibold text-navy sm:text-3xl">
+          <div className="overflow-hidden rounded-2xl border border-border bg-navy shadow-[var(--shadow-card)]">
+            <iframe
+              src="https://www.youtube-nocookie.com/embed/UmN8Pc7kyKI"
+              title="H O P E Foundation, Inc Volunteer Introductory Video"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+              className="block aspect-video w-full border-0"
+            />
+          </div>
+
+          <h3 className="mt-12 font-display text-2xl font-semibold text-navy sm:text-3xl">
             Volunteer and Sponsor Interest Form
           </h3>
           <p className="mt-2 text-sm text-muted">

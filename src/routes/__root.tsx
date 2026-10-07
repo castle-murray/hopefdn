@@ -2,6 +2,7 @@ import {
   createRootRoute,
   HeadContent,
   Outlet,
+  redirect,
   Scripts,
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
@@ -12,6 +13,7 @@ import appCss from "../styles.css?url";
 import cormorant600 from "@fontsource/cormorant-garamond/files/cormorant-garamond-latin-600-normal.woff2?url";
 import sourceSans400 from "@fontsource/source-sans-3/files/source-sans-3-latin-400-normal.woff2?url";
 import { PRIMARY_PUBLIC_HOST } from "@/lib/public-hosts";
+import { isOldStorePath, STORE_COMING_SOON_PATH } from "@/lib/store-redirects";
 
 const APP_NAME = "H.O.P.E. Foundation, Inc.";
 const APP_DESCRIPTION =
@@ -24,6 +26,12 @@ const ogImage = `https://${host}/og.jpg`;
 
 
 export const Route = createRootRoute({
+  beforeLoad: ({ location }) => {
+    // Retired store URLs → the store Coming Soon page (real 302 on SSR).
+    if (isOldStorePath(location.pathname)) {
+      throw redirect({ to: STORE_COMING_SOON_PATH, statusCode: 302 });
+    }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },

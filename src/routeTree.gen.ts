@@ -27,8 +27,6 @@ import { Route as NeedHelpNowRouteImport } from './routes/need-help-now'
 import { Route as PartnersRouteImport } from './routes/partners'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResourceCenterRouteImport } from './routes/resource-center'
-import { Route as AdminOrdersRouteImport } from './routes/admin_.orders'
-import { Route as AdminShopRouteImport } from './routes/admin_.shop'
 import { Route as AdminUsersRouteImport } from './routes/admin_.users'
 import { Route as EventsManageRouteImport } from './routes/events_.manage'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -125,16 +123,6 @@ const ResourceCenterRoute = ResourceCenterRouteImport.update({
   path: '/resource-center',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminOrdersRoute = AdminOrdersRouteImport.update({
-  id: '/admin_/orders',
-  path: '/admin/orders',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminShopRoute = AdminShopRouteImport.update({
-  id: '/admin_/shop',
-  path: '/admin/shop',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/admin_/users',
   path: '/admin/users',
@@ -180,8 +168,6 @@ export interface FileRoutesByFullPath {
   '/partners': typeof PartnersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
-  '/admin/orders': typeof AdminOrdersRoute
-  '/admin/shop': typeof AdminShopRoute
   '/admin/users': typeof AdminUsersRoute
   '/events/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -207,8 +193,6 @@ export interface FileRoutesByTo {
   '/partners': typeof PartnersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
-  '/admin/orders': typeof AdminOrdersRoute
-  '/admin/shop': typeof AdminShopRoute
   '/admin/users': typeof AdminUsersRoute
   '/events/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -235,8 +219,6 @@ export interface FileRoutesById {
   '/partners': typeof PartnersRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resource-center': typeof ResourceCenterRoute
-  '/admin_/orders': typeof AdminOrdersRoute
-  '/admin_/shop': typeof AdminShopRoute
   '/admin_/users': typeof AdminUsersRoute
   '/events_/manage': typeof EventsManageRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -264,8 +246,6 @@ export interface FileRouteTypes {
     | '/partners'
     | '/reset-password'
     | '/resource-center'
-    | '/admin/orders'
-    | '/admin/shop'
     | '/admin/users'
     | '/events/manage'
     | '/api/auth/$'
@@ -291,8 +271,6 @@ export interface FileRouteTypes {
     | '/partners'
     | '/reset-password'
     | '/resource-center'
-    | '/admin/orders'
-    | '/admin/shop'
     | '/admin/users'
     | '/events/manage'
     | '/api/auth/$'
@@ -318,8 +296,6 @@ export interface FileRouteTypes {
     | '/partners'
     | '/reset-password'
     | '/resource-center'
-    | '/admin_/orders'
-    | '/admin_/shop'
     | '/admin_/users'
     | '/events_/manage'
     | '/api/auth/$'
@@ -346,8 +322,6 @@ export interface RootRouteChildren {
   PartnersRoute: typeof PartnersRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ResourceCenterRoute: typeof ResourceCenterRoute
-  AdminOrdersRoute: typeof AdminOrdersRoute
-  AdminShopRoute: typeof AdminShopRoute
   AdminUsersRoute: typeof AdminUsersRoute
   EventsManageRoute: typeof EventsManageRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -483,20 +457,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResourceCenterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin_/orders': {
-      id: '/admin_/orders'
-      path: '/admin/orders'
-      fullPath: '/admin/orders'
-      preLoaderRoute: typeof AdminOrdersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin_/shop': {
-      id: '/admin_/shop'
-      path: '/admin/shop'
-      fullPath: '/admin/shop'
-      preLoaderRoute: typeof AdminShopRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin_/users': {
       id: '/admin_/users'
       path: '/admin/users'
@@ -554,8 +514,6 @@ const rootRouteChildren: RootRouteChildren = {
   PartnersRoute: PartnersRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ResourceCenterRoute: ResourceCenterRoute,
-  AdminOrdersRoute: AdminOrdersRoute,
-  AdminShopRoute: AdminShopRoute,
   AdminUsersRoute: AdminUsersRoute,
   EventsManageRoute: EventsManageRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

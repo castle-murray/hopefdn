@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Facebook,
@@ -14,27 +13,9 @@ import {
 import { Logo } from "@/components/logo";
 import { mainNav, site } from "@/data/site";
 import { Button } from "@/components/ui/button";
-import { getShopVisibility } from "@/lib/shop/server";
 
 export function Footer() {
-  const [showShop, setShowShop] = useState(true);
-  useEffect(() => {
-    let cancelled = false;
-    void getShopVisibility()
-      .then((v) => {
-        if (!cancelled) setShowShop(v.canAccess);
-      })
-      .catch(() => {
-        if (!cancelled) setShowShop(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const nav = showShop
-    ? mainNav
-    : mainNav.filter((item) => item.href !== "/legacy");
+  const nav = mainNav;
 
   return (
     <footer className="mt-auto">
@@ -128,13 +109,11 @@ export function Footer() {
                   Become a Partner
                 </Link>
               </li>
-              {showShop ? (
-                <li>
-                  <Link to="/legacy" className="transition hover:text-gold-light">
-                    Legacy Collection
-                  </Link>
-                </li>
-              ) : null}
+              <li>
+                <Link to="/legacy" className="transition hover:text-gold-light">
+                  Legacy Collection
+                </Link>
+              </li>
               <li>
                 <Link
                   to="/hope-community-haven"

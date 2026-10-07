@@ -7,7 +7,7 @@
  *
  * HOPE-12 hotfix: tip `05b87e7` leaked DB client symbols into public assets
  * because routes imported a module that statically pulled the DB layer.
- * Mirror shop: thin createServerFn here + dynamic import of the heavy server module.
+ * Pattern: thin createServerFn here + dynamic import of the heavy server module.
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";

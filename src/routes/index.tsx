@@ -25,25 +25,17 @@ import {
   CARD_SRCSET_WIDTHS,
   imgSrcSet,
 } from "@/lib/images";
-import { getShopVisibility } from "@/lib/shop/server";
 
 export const Route = createFileRoute("/")({
   loader: async () => {
-    const [list, shop] = await Promise.all([
-      listEvents({
-        data: {
-          from: new Date().toISOString(),
-          limit: 4,
-        },
-      }),
-      getShopVisibility().catch(() => ({
-        publicEnabled: false,
-        canAccess: false,
-      })),
-    ]);
+    const list = await listEvents({
+      data: {
+        from: new Date().toISOString(),
+        limit: 4,
+      },
+    });
     return {
       events: list.events,
-      shopPublic: shop.publicEnabled,
     };
   },
   component: HomePage,
@@ -116,7 +108,7 @@ const guestHelpLinks = [
 ] as const;
 
 function HomePage() {
-  const { events, shopPublic } = Route.useLoaderData();
+  const { events } = Route.useLoaderData();
   return (
     <>
       {/* Hero — hug photo with mockup headline; no scrim, no CTAs on the image */}
@@ -418,11 +410,6 @@ function HomePage() {
             <Button asChild variant="default" size="lg">
               <Link to="/get-involved">Get Involved</Link>
             </Button>
-            {shopPublic ? (
-              <Button asChild variant="outline" size="lg">
-                <Link to="/legacy">Shop Legacy Collection</Link>
-              </Button>
-            ) : null}
           </div>
         </div>
       </section>

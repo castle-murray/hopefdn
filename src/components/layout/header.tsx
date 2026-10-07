@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ChevronDown,
@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { mainNav, site } from "@/data/site";
-import { getShopVisibility } from "@/lib/shop/server";
 import { cn } from "@/lib/utils";
 
 /** Gold filled disc with navy icon strokes (phone, email). */
@@ -28,23 +27,8 @@ export function Header() {
   // (going fixed shifts content and browser scroll anchoring nudges scrollY).
   const openScrollYRef = useRef<number | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [showShop, setShowShop] = useState(true);
   const [hideContactBar, setHideContactBar] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-
-  useEffect(() => {
-    let cancelled = false;
-    void getShopVisibility()
-      .then((v) => {
-        if (!cancelled) setShowShop(v.canAccess);
-      })
-      .catch(() => {
-        if (!cancelled) setShowShop(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [pathname]);
 
   // Collapse contact strip on scroll with a wide hysteresis band.
   // Collapsing the bar shortens the document and can drop scrollY by ~50–80px;
@@ -124,13 +108,7 @@ export function Header() {
     };
   }, [mobileOpen]);
 
-  const navItems = useMemo(
-    () =>
-      showShop
-        ? mainNav
-        : mainNav.filter((item) => item.href !== "/legacy"),
-    [showShop],
-  );
+  const navItems = mainNav;
 
   // Collapse contact strip on scroll, or while the mobile menu is open so the
   // menu sits flush under the main nav without the utility bar above it.

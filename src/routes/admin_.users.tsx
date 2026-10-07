@@ -343,8 +343,8 @@ function AdminUsersPage() {
                 </div>
               ) : (
                 <p className="rounded-lg border border-border bg-ivory px-4 py-3 text-sm text-navy">
-                  No app content is tied to this user (seeded events and shop
-                  orders are not user-owned). Safe to delete.
+                  No app content is tied to this user (seeded events are not
+                  user-owned). Safe to delete.
                 </p>
               )}
               <div className="flex flex-wrap gap-2">

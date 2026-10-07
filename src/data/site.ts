@@ -85,14 +85,7 @@ export const mainNav: NavItem[] = [
     ],
   },
   { label: "Events", href: "/events" },
-  {
-    label: "Shop",
-    href: "/legacy",
-    children: [
-      { label: "Shop the Collection", href: "/legacy", description: "Wear the mission" },
-      { label: "Why Merchandise Matters", href: "/legacy#why", description: "Carry the legacy" },
-    ],
-  },
+  { label: "Shop", href: "/legacy" },
   {
     label: "Get Involved",
     href: "/get-involved",
@@ -116,13 +109,6 @@ export const quickLinks = [
     // Bias crop left so the woman on the far left stays in frame.
     imagePosition: "22% center",
     icon: "calendar" as const,
-  },
-  {
-    title: "The Legacy Collection",
-    description: "Wear the mission. Carry the legacy.",
-    href: "/legacy",
-    image: "/images/product-legacy-tumbler.webp",
-    icon: "shopping-bag" as const,
   },
   {
     title: "Our Impact",
@@ -275,6 +261,3 @@ export const scriptures = [
     text: "Verily I say unto you, Inasmuch as ye did it not to one of the least of these, ye did it not to me.",
   },
 ];
-
-/** @deprecated Products live in the shop database — use listStoreProducts(). */
-export const legacyProducts = [] as const;

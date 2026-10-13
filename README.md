@@ -77,6 +77,8 @@ ecosystem file (examples below), or load it in your shell first:
 set -a; . ./.env; set +a
 ```
 
+If a value contains spaces or shell characters (`&`, `$`, `#`, `;`), wrap it in
+double quotes in `.env`, or the `set -a; . ./.env` line above will mangle it.
 Never commit `.env`.
 
 ## 4. Database setup

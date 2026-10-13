@@ -27,7 +27,7 @@ const ogImage = `https://${host}/og.jpg`;
 
 export const Route = createRootRoute({
   beforeLoad: ({ location }) => {
-    // Retired store URLs → the store Coming Soon page (real 302 on SSR).
+    // Retired URLs → /legacy (real 302 on SSR); see src/lib/store-redirects.ts.
     if (isOldStorePath(location.pathname)) {
       throw redirect({ to: STORE_COMING_SOON_PATH, statusCode: 302 });
     }

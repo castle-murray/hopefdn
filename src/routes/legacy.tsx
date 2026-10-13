@@ -4,9 +4,8 @@ import { PageHero } from "@/components/page-hero";
 import { Button } from "@/components/ui/button";
 
 /**
- * The online store has been retired from this site. /legacy stays as the
- * store URL (nav links point here) and shows a simple Coming Soon page; old
- * store URLs redirect here (see src/lib/store-redirects.ts).
+ * /legacy page (nav links point here). Retired paths redirect here too
+ * (see src/lib/store-redirects.ts).
  */
 export const Route = createFileRoute("/legacy")({
   component: StoreComingSoonPage,

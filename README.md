@@ -7,14 +7,9 @@ It is a custom app, not WordPress:
 
 - **TanStack Start + React + TypeScript** (built with Vite; the server is Nitro)
 - **Node.js** runs the built server
-- **PostgreSQL** stores events, staff accounts and sessions
+- **PostgreSQL** holds events, staff accounts and sessions
 - **Better Auth** handles staff sign-in (username + password)
 - Tailwind CSS for styling
-
-> **The online store was removed.** Regina runs the store separately. Old
-> store links (`/shop`, `/cart`, `/legacy/...`, etc.) redirect to `/legacy`,
-> which is now a "store coming soon" page. Migration `0014_drop_store.sql`
-> drops the old store tables.
 
 ---
 
@@ -63,7 +58,7 @@ Every setting is explained in `.env.example`. The important ones:
 - `PORT` / `HOST` — where the built server listens (e.g. `3005` on `127.0.0.1`).
 - `SMTP_*` and `CONTACT_TO` — mail server for password-reset emails and the
   contact form (see "Email (SMTP)").
-- `UPLOAD_EVENTS_DIR` — optional; where event images are stored (default
+- `UPLOAD_EVENTS_DIR` — optional; where event images are saved (default
   `public/uploads/events` inside the app folder).
 - `HOPE_EVENTS_MCP_API_KEY` / `HOPE_EVENTS_MCP_ACTOR_USER_ID` — optional, only for
   the `/mcp` endpoint.
@@ -111,29 +106,6 @@ It adds no sample data; add events at `/events/manage`.
 `vite build && npm run db:migrate`), but only if `DATABASE_URL` is in the
 environment at that moment. Migrations are tracked in the `_migrations` table and
 each runs once.
-
-### Existing databases (old migration chain)
-
-Before October 2026 the schema was built by 14 files (`0001_auth.sql` …
-`0014_drop_store.sql`). They were squashed into `0001_baseline.sql`, which makes
-exactly the same schema. `scripts/migrate.mjs` handles older databases itself:
-
-- **Finished the old chain** (`0014_drop_store.sql` is in `_migrations`): it
-  records `0001_baseline.sql` as applied and runs nothing. No action needed.
-- **Stopped part-way** (some old names, but not `0014_drop_store.sql`): it stops
-  with an error. Finish the old chain first from a separate copy of the old files:
-
-  ```bash
-  mkdir /tmp/hope-old && git archive fa167dd migrations scripts | tar -x -C /tmp/hope-old
-  ln -s "$PWD/node_modules" /tmp/hope-old/node_modules
-  node /tmp/hope-old/scripts/migrate.mjs     # with .env loaded; take a backup first
-  npm run db:migrate                         # now marks the baseline
-  ```
-
-  The current hopefdn.org database is in this state (it stops after `0009`).
-
-The included dump already has only the `0001_baseline.sql` row, so migrating it
-does nothing.
 
 ### First admin
 
@@ -260,7 +232,7 @@ The `Host` header matters: sign-in only works for the host names the app knows
 Staff uploads (event flyers and banners, JPG/PNG/WebP/GIF, max 5 MB) are saved
 as files in `public/uploads/events/` (or `UPLOAD_EVENTS_DIR`) and served at
 `/uploads/events/<file>`. They are **not** in the database — the database only
-stores the path. When you move servers or restore a backup, copy this folder
+keeps the path. When you move servers or restore a backup, copy this folder
 too, or events will show broken images. This package includes the current
 images in `public/uploads/events/`.
 

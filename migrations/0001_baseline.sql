@@ -1,9 +1,7 @@
--- Baseline schema for the H.O.P.E. Foundation site (replaces the old
--- 0001_auth … 0014_drop_store chain; it produces the same schema).
+-- Baseline schema for the H.O.P.E. Foundation site.
 --
--- Runs only on an empty database. A database that already ran the old chain
--- (has 0014_drop_store.sql in _migrations) is marked as baselined by
--- scripts/migrate.mjs without running this file.
+-- Runs only on an empty database. Databases created before this baseline are
+-- handled by scripts/migrate.mjs.
 --
 -- No seed data: events come from the restored dump or are entered in /events/manage.
 -- Better Auth tables use Better Auth's camelCase column names.

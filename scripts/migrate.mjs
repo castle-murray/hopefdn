@@ -40,10 +40,9 @@ try {
   const { rows: doneRows } = await client.query("select name from _migrations");
   const done = new Set(doneRows.map((r) => r.name));
 
-  // The old 0001_auth … 0014_drop_store chain was squashed into 0001_baseline.sql
-  // (same schema). A database that finished the old chain is marked baselined
-  // instead of re-running it. One that stopped part-way must finish the old chain
-  // first (see README, "Existing databases").
+  // Databases created before 0001_baseline.sql (same schema): if the earlier
+  // migration set is complete, mark the baseline as applied instead of running
+  // it; if it is incomplete, stop with an error.
   if (!done.has(BASELINE)) {
     const oldNames = [...done].filter((n) => OLD_CHAIN.includes(n));
     if (done.has(OLD_CHAIN_LAST)) {
@@ -56,7 +55,7 @@ try {
     } else if (oldNames.length > 0) {
       throw new Error(
         `[migrate] this database ran only part of the old migration chain (last: ${oldNames.sort().at(-1)}). ` +
-          `Finish it with the migrations from commit fa167dd (git show fa167dd:migrations/<file>), then re-run. See README.`,
+          `Finish it with the migrations from commit fa167dd (git show fa167dd:migrations/<file>), then re-run.`,
       );
     }
   }

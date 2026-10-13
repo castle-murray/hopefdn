@@ -1,10 +1,6 @@
 /**
- * The online store was removed from the site. Old store URLs (and the common
- * store paths people guess) redirect to the Coming Soon page at /legacy.
- *
- * Only /legacy, /admin/shop and /admin/orders ever existed here; the rest are
- * catch-alls so old links and bookmarks never 404. Temporary (302) on purpose,
- * so browsers don't cache it if a store returns on one of these paths.
+ * Redirects a set of retired URL paths (and common guesses) to /legacy so old
+ * links and bookmarks never 404. Temporary (302) so browsers don't cache it.
  */
 export const STORE_COMING_SOON_PATH = "/legacy";
 

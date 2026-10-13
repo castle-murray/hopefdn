@@ -13,6 +13,16 @@ if (!databaseUrl) {
   process.exit(0);
 }
 
+const BASELINE = "0001_baseline.sql";
+const OLD_CHAIN = [
+  "0001_auth.sql", "0002_events.sql", "0003_username.sql", "0004_shop.sql",
+  "0005_product_images.sql", "0006_product_images_logo.sql", "0007_circle_logo_tee.sql",
+  "0008_shop_public_setting.sql", "0009_webp_product_images.sql", "0010_event_image.sql",
+  "0011_event_banner.sql", "0012_event_recurrence.sql",
+  "0013_event_ticket_major_indefinite.sql", "0014_drop_store.sql",
+];
+const OLD_CHAIN_LAST = "0014_drop_store.sql";
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const migrationsDir = path.join(root, "migrations");
 
@@ -29,6 +39,27 @@ try {
 
   const { rows: doneRows } = await client.query("select name from _migrations");
   const done = new Set(doneRows.map((r) => r.name));
+
+  // The old 0001_auth … 0014_drop_store chain was squashed into 0001_baseline.sql
+  // (same schema). A database that finished the old chain is marked baselined
+  // instead of re-running it. One that stopped part-way must finish the old chain
+  // first (see README, "Existing databases").
+  if (!done.has(BASELINE)) {
+    const oldNames = [...done].filter((n) => OLD_CHAIN.includes(n));
+    if (done.has(OLD_CHAIN_LAST)) {
+      await client.query(
+        "insert into _migrations (name) values ($1) on conflict (name) do nothing",
+        [BASELINE],
+      );
+      done.add(BASELINE);
+      console.log(`[migrate] old chain complete (${OLD_CHAIN_LAST}) — marked ${BASELINE} as applied`);
+    } else if (oldNames.length > 0) {
+      throw new Error(
+        `[migrate] this database ran only part of the old migration chain (last: ${oldNames.sort().at(-1)}). ` +
+          `Finish it with the migrations from commit fa167dd (git show fa167dd:migrations/<file>), then re-run. See README.`,
+      );
+    }
+  }
 
   const files = (await readdir(migrationsDir))
     .filter((f) => f.endsWith(".sql"))

@@ -61,8 +61,8 @@ Every setting is explained in `.env.example`. The important ones:
 - `SUPERUSER_USERNAME` / `SUPERUSER_PASSWORD` / `SUPERUSER_NAME` / `SUPERUSER_EMAIL`
   — used once to create the first admin (see "First admin" below).
 - `PORT` / `HOST` — where the built server listens (e.g. `3005` on `127.0.0.1`).
-- `SMTP_*` — mail server for password-reset emails. Until set, reset links are
-  only printed in the server log.
+- `SMTP_*` and `CONTACT_TO` — mail server for password-reset emails and the
+  contact form (see "Email (SMTP)").
 - `UPLOAD_EVENTS_DIR` — optional; where event images are stored (default
   `public/uploads/events` inside the app folder).
 - `HOPE_EVENTS_MCP_API_KEY` / `HOPE_EVENTS_MCP_ACTOR_USER_ID` — optional, only for
@@ -104,12 +104,36 @@ The dump already includes the `_migrations` table, so `npm run db:migrate`
 afterwards only applies anything newer.
 
 **B. Start empty:** just run the migrations (`npm run db:migrate` with `.env`
-loaded). Migration `0002_events.sql` inserts a few sample events you can delete.
+loaded). There is one migration, `0001_baseline.sql`, which creates every table.
+It adds no sample data; add events at `/events/manage`.
 
 `npm run build` **also runs the migrations** at the end (it is
 `vite build && npm run db:migrate`), but only if `DATABASE_URL` is in the
 environment at that moment. Migrations are tracked in the `_migrations` table and
 each runs once.
+
+### Existing databases (old migration chain)
+
+Before October 2026 the schema was built by 14 files (`0001_auth.sql` …
+`0014_drop_store.sql`). They were squashed into `0001_baseline.sql`, which makes
+exactly the same schema. `scripts/migrate.mjs` handles older databases itself:
+
+- **Finished the old chain** (`0014_drop_store.sql` is in `_migrations`): it
+  records `0001_baseline.sql` as applied and runs nothing. No action needed.
+- **Stopped part-way** (some old names, but not `0014_drop_store.sql`): it stops
+  with an error. Finish the old chain first from a separate copy of the old files:
+
+  ```bash
+  mkdir /tmp/hope-old && git archive fa167dd migrations scripts | tar -x -C /tmp/hope-old
+  ln -s "$PWD/node_modules" /tmp/hope-old/node_modules
+  node /tmp/hope-old/scripts/migrate.mjs     # with .env loaded; take a backup first
+  npm run db:migrate                         # now marks the baseline
+  ```
+
+  The current hopefdn.org database is in this state (it stops after `0009`).
+
+The included dump already has only the `0001_baseline.sql` row, so migrating it
+does nothing.
 
 ### First admin
 
@@ -240,7 +264,32 @@ stores the path. When you move servers or restore a backup, copy this folder
 too, or events will show broken images. This package includes the current
 images in `public/uploads/events/`.
 
-## 10. MCP events endpoint (optional)
+## 10. Email (SMTP)
+
+Two things send email, both through `src/lib/mail.ts` and the same settings:
+
+1. **Contact form** ("Get In Touch" on `/about#contact`) → sent to `CONTACT_TO`,
+   with Reply-To set to the visitor's email, so you can reply directly. It has
+   a hidden spam trap field and allows 5 messages per visitor IP per 10 minutes.
+2. **Staff password-reset links** → sent to the staff member.
+
+Settings (in `.env`):
+
+| Setting | Example | Notes |
+| --- | --- | --- |
+| `SMTP_HOST` | `smtp.gmail.com` | mail server |
+| `SMTP_PORT` | `587` | 587 (STARTTLS) or 465 (TLS) |
+| `SMTP_SECURE` | `false` | `true` for 465; `false` for 587 (STARTTLS is required) |
+| `SMTP_USER` / `SMTP_PASS` | | mailbox login / app password |
+| `SMTP_FROM` | `"H.O.P.E. Foundation <noreply@hopefdn.org>"` | must be allowed by the mail server |
+| `CONTACT_TO` | `regina@hopefdn.org` | contact form recipient(s), comma-separated |
+
+If SMTP or `CONTACT_TO` isn't set, the contact form shows visitors "please call
+757-241-6900 or email …" and the server log says
+`[contact] SMTP_* or CONTACT_TO not configured`. Password-reset links are then
+printed in the server log instead of emailed. Restart the app after changing these.
+
+## 11. MCP events endpoint (optional)
 
 `/mcp` is a Model Context Protocol endpoint that lets an AI assistant or script
 list/create/update/delete events and upload event images

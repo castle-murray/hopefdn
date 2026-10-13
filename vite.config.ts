@@ -221,7 +221,7 @@ export default defineConfig(({ command, mode }) => {
       ...(command === "build"
         ? [
             nitro({
-              preset: "vercel",
+              preset: process.env.NITRO_PRESET?.trim() || "node-server",
             }),
           ]
         : []),

@@ -33,7 +33,7 @@ It is a custom app, not WordPress:
 README.md                 this file
 .env.example              every setting the app reads, with placeholders
 package.json, package-lock.json
-vite.config.ts            build config (see "Build" — one line to check)
+vite.config.ts            build config
 migrations/               SQL migrations, applied in order by scripts/migrate.mjs
 scripts/migrate.mjs       migration runner (npm run db:migrate)
 src/                      app source (routes in src/routes)
@@ -129,16 +129,10 @@ set -a; . ./.env; set +a     # so the build can also run migrations
 npm run build
 ```
 
-**Check `vite.config.ts` before building.** Near the bottom it says
-`nitro({ preset: "vercel" })`, left over from an earlier hosting plan. For a
-normal Linux server change that one line to:
-
-```ts
-nitro({ preset: "node-server" }),
-```
-
-With `node-server` the build produces `.output/server/index.mjs`. (The live
-servers run with this one-line change.)
+The build produces a plain Node server at `.output/server/index.mjs` (Nitro
+`node-server` preset, the default in `vite.config.ts`). To target another
+host, set `NITRO_PRESET` (e.g. `vercel`) in the environment or `.env` before
+building; most people never need it.
 
 ## 6. Run
 

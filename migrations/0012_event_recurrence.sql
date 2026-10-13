@@ -32,4 +32,7 @@ alter table events
         and (recurrence_until is not null or recurrence_count is not null)
       )
     )
-  );
+  ) not valid;
+-- NOT VALID: databases that already hold open-ended repeating events (prod
+-- had these columns before this file was recorded) must not fail here.
+-- 0013 replaces this constraint with the relaxed, fully validated version.

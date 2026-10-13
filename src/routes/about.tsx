@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { Button } from "@/components/ui/button";
 import { aboutArchiveImages, type ArchiveImage } from "@/data/about-archive-images";
 import { site } from "@/data/site";
+import { CONTACT_TOPICS, submitContactForm } from "@/lib/contact";
 
 export const Route = createFileRoute("/about")({
   component: AboutPage,
@@ -801,22 +802,60 @@ function PersonCard({
 }
 
 function ContactForm() {
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<
+    { kind: "ok" } | { kind: "error"; message: string } | null
+  >(null);
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    const value = (key: string) => String(data.get(key) ?? "");
+    setBusy(true);
+    setStatus(null);
+    try {
+      const res = await submitContactForm({
+        data: {
+          name: value("name"),
+          email: value("email"),
+          phone: value("phone"),
+          topic: value("topic"),
+          message: value("message"),
+          website: value("website"),
+        },
+      });
+      if (res.ok) {
+        form.reset();
+        setStatus({ kind: "ok" });
+      } else {
+        setStatus({ kind: "error", message: res.message });
+      }
+    } catch (err) {
+      setStatus({
+        kind: "error",
+        message:
+          err instanceof Error && err.message && !err.message.includes("\n")
+            ? err.message
+            : `Sorry, we couldn't send your message right now. Please call ${site.phone} or email ${site.email}.`,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <form
       className="rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)] sm:p-8"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const form = e.currentTarget;
-        const data = new FormData(form);
-        const subject = encodeURIComponent(
-          `HOPE Foundation inquiry — ${String(data.get("topic") || "General")}`,
-        );
-        const body = encodeURIComponent(
-          `Name: ${data.get("name")}\nEmail: ${data.get("email")}\nPhone: ${data.get("phone")}\nTopic: ${data.get("topic")}\n\n${data.get("message")}`,
-        );
-        window.location.href = `${site.emailHref}?subject=${subject}&body=${body}`;
-      }}
+      onSubmit={(e) => void onSubmit(e)}
     >
+      {/* Honeypot: hidden from people and screen readers; bots fill it in. */}
+      <div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
+        <label>
+          Website
+          <input type="text" name="website" tabIndex={-1} autoComplete="off" defaultValue="" />
+        </label>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Full name" name="name" required />
         <Field label="Email" name="email" type="email" required />
@@ -828,11 +867,9 @@ function ContactForm() {
             className="h-11 w-full rounded-md border border-border bg-ivory px-3 text-ink outline-none focus:border-gold focus:ring-2 focus:ring-gold/30"
             defaultValue="Volunteer"
           >
-            <option>Help / Guest Services</option>
-            <option>Volunteer</option>
-            <option>Donate</option>
-            <option>Partnership</option>
-            <option>General Information</option>
+            {CONTACT_TOPICS.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
           </select>
         </label>
       </div>
@@ -846,8 +883,26 @@ function ContactForm() {
           placeholder="How can we help?"
         />
       </label>
-      <Button type="submit" variant="default" size="lg" className="mt-5 w-full sm:w-auto">
-        Send Message
+      <div aria-live="polite">
+        {status?.kind === "ok" ? (
+          <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+            Thank you — your message was sent. We will get back to you soon.
+          </p>
+        ) : null}
+        {status?.kind === "error" ? (
+          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            {status.message}
+          </p>
+        ) : null}
+      </div>
+      <Button
+        type="submit"
+        variant="default"
+        size="lg"
+        className="mt-5 w-full sm:w-auto"
+        disabled={busy}
+      >
+        {busy ? "Sending…" : "Send Message"}
       </Button>
     </form>
   );

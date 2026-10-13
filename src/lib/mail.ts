@@ -13,6 +13,8 @@ export type MailMessage = {
   subject: string;
   text: string;
   html?: string;
+  /** Visitor address for "Reply" in the recipient's mail app. */
+  replyTo?: string;
 };
 
 function env(key: string): string | undefined {
@@ -41,8 +43,11 @@ function getTransporter(): Transporter | null {
 
   const host = env("SMTP_HOST")!;
   const port = Number(env("SMTP_PORT") ?? "587");
+  // SMTP_SECURE=true: implicit TLS (usually port 465). false: plain connect
+  // upgraded with STARTTLS, which is required on 587.
+  const secureEnv = env("SMTP_SECURE")?.toLowerCase();
   const secure =
-    env("SMTP_SECURE") === "true" || env("SMTP_SECURE") === "1" || port === 465;
+    secureEnv === "true" || secureEnv === "1" || (secureEnv === undefined && port === 465);
   const user = env("SMTP_USER");
   const pass = env("SMTP_PASS");
 
@@ -50,6 +55,7 @@ function getTransporter(): Transporter | null {
     host,
     port,
     secure,
+    requireTLS: !secure && port === 587,
     auth: user ? { user, pass: pass ?? "" } : undefined,
   });
   return transporter;
@@ -82,6 +88,7 @@ export async function sendMail(
     subject: message.subject,
     text: message.text,
     html: message.html ?? message.text.replace(/\n/g, "<br/>"),
+    replyTo: message.replyTo,
   });
   return { ok: true, mode: "smtp" };
 }
